@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html lang="pt-BR" xmlns:th="http://www.thymeleaf.org">
+<head>
+  <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>OFICYNIC · Cadastros</title>
+  <meta name="csrf-token" th:content="${_csrf.token}"><meta name="csrf-header" th:content="${_csrf.headerName}">
+  <link rel="stylesheet" th:href="@{/css/app.css}">
+  <script th:src="@{/js/app.js}" defer></script>
+</head>
+<body th:attr="data-secao=${secao}">
+<a class="skip" href="#conteudo">Pular para o conteúdo</a>
+<button class="menu-toggle" id="menu-toggle" aria-expanded="false" aria-controls="sidebar" aria-label="Abrir menu">☰</button>
+<aside class="sidebar" id="sidebar">
+  <a class="brand" th:href="@{/}"><span class="brand-mark">O<span>+</span></span><span>OFICYNIC<small>GESTÃO DA OFICINA</small></span></a>
+  <div class="nav-label">ESPAÇO DE TRABALHO</div>
+  <nav aria-label="Menu principal">
+    <a th:href="@{/}" th:classappend="${secao == 'inicio'} ? 'active'" th:attr="aria-current=${secao == 'inicio' ? 'page' : null}"><span class="nav-icon">⌂</span>Visão geral</a>
+    <div class="nav-divider"></div><div class="nav-label">CADASTROS</div>
+    <a th:href="@{/clientes}" th:classappend="${secao == 'clientes'} ? 'active'" th:attr="aria-current=${secao == 'clientes' ? 'page' : null}"><span class="nav-icon">◉</span>Clientes</a>
+    <a th:href="@{/motocicletas}" th:classappend="${secao == 'motocicletas'} ? 'active'" th:attr="aria-current=${secao == 'motocicletas' ? 'page' : null}"><span class="nav-icon">◇</span>Motocicletas</a>
+    <a th:href="@{/produtos}" th:classappend="${secao == 'produtos'} ? 'active'" th:attr="aria-current=${secao == 'produtos' ? 'page' : null}"><span class="nav-icon">▧</span>Produtos</a>
+    <a th:href="@{/servicos}" th:classappend="${secao == 'servicos'} ? 'active'" th:attr="aria-current=${secao == 'servicos' ? 'page' : null}"><span class="nav-icon">⚒</span>Serviços</a>
+  </nav>
+  <div class="sidebar-bottom"><span class="status-dot"></span> Seu espaço de trabalho<small>OFICYNIC · Versão de estudo</small></div>
+</aside>
+<div class="workspace">
+  <header class="topbar"><span class="breadcrumb">Oficina <span>/</span> <strong id="breadcrumb">Cadastros</strong></span><div class="account"><span class="avatar">O</span><span th:text="${#authentication.name}">Administrador</span><form th:action="@{/logout}" method="post"><button class="logout" type="submit">Sair</button></form></div></header>
+  <main id="conteudo" tabindex="-1">
+    <div id="notice" class="notice" role="status" aria-live="polite" hidden></div>
+    <section class="page-heading"><div><p class="eyebrow" id="eyebrow">SUA OFICINA, ORGANIZADA</p><h1 id="page-title">Visão geral</h1><p class="subtitle" id="page-description">Um lugar para cuidar da base do seu atendimento.</p></div><button id="new-record" class="button primary" hidden><span>＋</span><span id="new-label">Novo cadastro</span></button></section>
+    <section id="dashboard" hidden>
+      <div class="welcome"><div><span class="pill">COMECE PELO ESSENCIAL</span><h2>Mais organização.<br>Mais tempo para a oficina.</h2><p>Cadastre seus clientes, organize as motocicletas<br class="desktop-break"> e mantenha seus catálogos à mão.</p><a class="button primary" th:href="@{/clientes}">Acessar clientes <span>→</span></a></div><div class="welcome-art" aria-hidden="true"><div class="ring ring-one"></div><div class="ring ring-two"></div><div class="art-card"><span>OFICYNIC</span><strong>O<span>+</span></strong><small>PRONTO PARA ORGANIZAR</small></div></div></div>
+      <div class="section-heading"><h2>Seus cadastros</h2><span>Selecione uma área para começar</span></div>
+      <div class="module-grid" id="module-grid"></div>
+      <div class="tip"><span class="tip-symbol">i</span><div><strong>Um passo de cada vez</strong><p>Comece pelos clientes e pelas motocicletas. Depois organize os produtos e serviços oferecidos pela oficina.</p></div></div>
+    </section>
+    <section class="list-panel" id="listing" hidden aria-label="Lista de cadastros">
+      <div class="list-toolbar"><div class="search-wrap"><span aria-hidden="true">⌕</span><label class="sr-only" for="search">Buscar cadastros</label><input type="search" id="search" placeholder="Buscar cadastros…" autocomplete="off"></div><div class="list-controls"><button type="button" class="button subtle" id="refresh">Atualizar</button></div></div>
+      <div class="table-scroll"><table><thead id="table-head"></thead><tbody id="table-body"></tbody></table></div>
+      <div class="empty-state" id="empty-state" hidden><span class="empty-symbol" aria-hidden="true">＋</span><h2 id="empty-title">Seu primeiro cadastro começa aqui</h2><p id="empty-description">Adicione um registro para começar a organizar sua oficina.</p><button class="button primary" id="empty-add" type="button">Criar primeiro cadastro</button></div>
+      <div id="loading" class="loading" role="status">Carregando cadastros…</div>
+      <footer class="list-footer"><span id="record-count">Aguardando dados</span><span>OFICYNIC</span></footer>
+    </section>
+    <footer class="page-footer">Feito para o dia a dia da sua oficina.<span>Cadastros · OFICYNIC</span></footer>
+    <noscript><p class="notice error">Ative o JavaScript para consultar e salvar os cadastros.</p></noscript>
+  </main>
+</div>
+<dialog id="record-dialog" aria-labelledby="form-title"><form id="record-form" novalidate><div class="dialog-header"><div><p class="eyebrow">CADASTRO</p><h2 id="form-title">Novo cadastro</h2></div><button type="button" class="close-button" id="close-dialog" aria-label="Fechar formulário">×</button></div><div class="dialog-body"><p id="form-description" class="form-description">Preencha os dados abaixo. Os campos com * são obrigatórios.</p><div id="form-error" class="notice error" role="alert" hidden></div><div class="form-grid" id="form-fields"></div></div><div class="dialog-footer"><button type="button" class="button secondary" id="cancel-dialog">Cancelar</button><button type="submit" class="button primary" id="save-record">Salvar cadastro</button></div></form></dialog>
+
+</body></html>
