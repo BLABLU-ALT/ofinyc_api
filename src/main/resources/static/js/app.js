@@ -1,35 +1,46 @@
 'use strict';
 // Os mesmos componentes de tela atendem aos quatro cadastros.
 const definitions = {
+  'ordens-servico': {
+    title:'Ordens de serviço', icon:'▤', hint:'Abra e consulte os atendimentos.', api:'/api/ordens-servico/consulta'
+  },
   clientes: {
-    title:'Clientes', singular:'cliente', description:'Pessoas que confiam na sua oficina.', icon:'◉', hint:'Organize os contatos e dados de atendimento.', columns:[['nome','Nome'],['cpf','CPF'],['telefone','Telefone'],['email','E-mail']], fields:[
+    title:'Clientes', singular:'cliente', description:'Pessoas que confiam na sua oficina.', icon:'◉', hint:'Organize os contatos e dados de atendimento.', columns:[['id','Código'],['nome','Nome'],['cpf','CPF'],['telefone','Telefone'],['email','E-mail']], fields:[
     ['nome','Nome completo','text',true,120,'wide'],['cpf','CPF','text',true,11,'','Somente os 11 números.'],['telefone','Telefone','tel',false,20],['email','E-mail','email',false,160],['endereco','Endereço','text',false,255,'wide']]
   }
   ,
   motocicletas: {
-    title:'Motocicletas',singular:'motocicleta',description:'As motocicletas atendidas pela sua oficina.',icon:'◇',hint:'Tenha as informações de cada moto à mão.',columns:[['placa','Placa'],['marca','Marca'],['modelo','Modelo'],['ano','Ano'],['cor','Cor']],fields:[
-    ['placa','Placa','text',true,7,'','Sem hífen. Ex.: ABC1D23'],['chassi','Chassi','text',true,17,'','Informe os 17 caracteres.'],['marca','Marca','text',true,80],['modelo','Modelo','text',true,100],['ano','Ano','number',true,null,'','Entre 1900 e 2100.'],['cor','Cor','text',false,50]]
+    title:'Motocicletas',singular:'motocicleta',description:'As motocicletas atendidas pela sua oficina.',icon:'◇',hint:'Tenha as informações de cada moto à mão.',note:'Informe o cliente e a placa ou o chassi (ou os dois).',columns:[['clienteNome','Proprietário'],['placa','Placa'],['chassi','Chassi'],['marca','Marca'],['modelo','Modelo'],['ano','Ano'],['cor','Cor']],fields:[
+    ['clienteId','Cliente proprietário','select',true],
+    ['placa','Placa','text',false,7,'','Sem hífen. Ex.: ABC1D23'],['chassi','Chassi','text',false,17,'','Informe os 17 caracteres.'],['marca','Marca','text',true,80,'','Digite para buscar e selecione uma sugestão.'],['modelo','Modelo','text',true,100,'','Sugestões da marca escolhida. Se não encontrar, digite o modelo.'],['ano','Ano','number',true,null,'','Entre 1900 e 2100.'],['cor','Cor','text',false,50]]
   }
   ,
   produtos: {
-    title:'Produtos',singular:'produto',description:'Seu catálogo de peças e produtos, sempre organizado.',icon:'▧',hint:'Consulte os itens e seus preços de venda.',columns:[['codigo','Código'],['descricao','Descrição'],['precoVenda','Preço de venda','money']],fields:[
-    ['codigo','Código do produto','text',true,40],['precoVenda','Preço de venda (R$)','number',true,null],['descricao','Descrição','text',true,180,'wide']]
+    title:'Produtos',singular:'produto',description:'Seu catálogo de peças e produtos, sempre organizado.',icon:'▧',hint:'Consulte os itens, unidades e saldos.',columns:[['codigo','Código'],['descricao','Descrição'],['unidadeMedida','Unidade'],['estoque','Estoque físico'],['empenho','Empenho'],['saldo','Disponível'],['precoVenda','Preço de venda','money']],fields:[
+    ['codigo','Código do produto','text',true,40],['precoVenda','Preço de venda (R$)','number',true,null],['unidadeMedida','Unidade de medida','select',true,null,'','Selecione a unidade utilizada no produto.'],['descricao','Descrição','text',true,180,'wide']]
   }
   ,
+  funcionarios: {
+    title:'Funcionários',singular:'funcionário',description:'Responsáveis pelos atendimentos e movimentações.',icon:'◉',hint:'Cadastre os responsáveis.',columns:[['id','Código'],['nome','Nome']],fields:[['nome','Nome completo','text',true,120,'wide']]
+  },
   servicos: {
-    title:'Serviços',singular:'serviço',description:'Os serviços que a sua oficina oferece.',icon:'⚒',hint:'Mantenha os serviços e valores atualizados.',columns:[['nome','Serviço'],['descricao','Descrição'],['preco','Preço','money']],fields:[
+    title:'Serviços',singular:'serviço',description:'Os serviços que a sua oficina oferece.',icon:'⚒',hint:'Mantenha os serviços e valores atualizados.',columns:[['id','Código'],['nome','Serviço'],['descricao','Descrição'],['preco','Preço','money']],fields:[
     ['nome','Nome do serviço','text',true,120,'wide'],['preco','Preço (R$)','number',true,null],['descricao','Descrição','text',false,255,'wide']]
   }
 }
 ;
 const $ = id => document.getElementById(id);
 const section = document.body.dataset.secao;
+const unidadesMedida = [['PC','Peça'],['MT','Metro'],['LT','Litro'],['KG','Quilograma'],['PAR','Par'],['JG','Jogo'],['KT','Kit']];
 const money = new Intl.NumberFormat('pt-BR', {
   style:'currency',currency:'BRL'
 }
 );
 let records = [], editingId = null, loadFailed = false, loading = false, saving = false;
+let aberturaCadastro = 0;
+let buscaProprietario = null;
 const dialog = $('record-dialog');
+dialog.addEventListener('close',()=>aberturaCadastro++);
 dialog.addEventListener('cancel', event => {
   if (saving) event.preventDefault();
 }
@@ -108,7 +119,7 @@ function buildDashboard() {
     hint.textContent=def.hint;
     card.append(top,count,title,hint);
     $('module-grid').append(card);
-    api('/api/'+key).then(data=> {
+    api(def.api || '/api/'+key).then(data=> {
       count.textContent=data.length;
     }
     ).catch(error=> {
@@ -132,10 +143,10 @@ function addField(field) {
     star.textContent=' *';
     labelEl.append(star);
   }
-  const input=document.createElement('input');
+  const input=document.createElement(type==='select'?'select':'input');
   input.id='field-'+name;
   input.name=name;
-  input.type=type;
+  if(type!=='select')input.type=type;
   input.required=required;
   input.autocomplete='off';
   if(maxLength)input.maxLength=maxLength;
@@ -155,6 +166,13 @@ function addField(field) {
   err.id='error-'+name;
   input.setAttribute('aria-describedby',err.id+(help?' help-'+name:''));
   wrap.append(labelEl,input);
+  if(section==='motocicletas' && ['marca','modelo'].includes(name)) {
+    const list=document.createElement('datalist');
+    list.id='sugestoes-'+name;
+    input.setAttribute('list',list.id);
+    wrap.append(list);
+    if(name==='marca')input.addEventListener('input',atualizarSugestoesMoto);
+  }
   if(help) {
     const hint=document.createElement('small');
     hint.id='help-'+name;
@@ -164,13 +182,40 @@ function addField(field) {
   }
   wrap.append(err);
   $('form-fields').append(wrap);
+  if(name==='unidadeMedida')preencherUnidades();
 }
-function openForm(record=null) {
+function preencherUnidades(atual='') {
+  const seletor=$('field-unidadeMedida');
+  seletor.replaceChildren(new Option('Selecione a unidade',''),...unidadesMedida.map(([codigo,descricao])=>new Option(codigo+' — '+descricao,codigo)));
+  if(atual&&!unidadesMedida.some(([codigo])=>codigo===atual))seletor.append(new Option(atual+' — Unidade anterior',atual));
+  seletor.value=atual||'';
+}
+function atualizarSugestoesMoto() {
+  if(section!=='motocicletas')return;
+  const normalizar=valor=>String(valor??'').trim().toLocaleLowerCase('pt-BR');
+  const catalogo=typeof catalogoMotos==='undefined'?{}:catalogoMotos;
+  const marca=normalizar($('field-marca').value);
+  const chave=Object.keys(catalogo).find(nome=>normalizar(nome)===marca);
+  const preencher=(nome,valores)=> {
+    const unicos=new Map();
+    valores.filter(Boolean).forEach(valor=> {
+      if(!unicos.has(normalizar(valor)))unicos.set(normalizar(valor),valor);
+    });
+    $('sugestoes-'+nome).replaceChildren(...Array.from(unicos.values()).map(valor=> {
+      const option=document.createElement('option'); option.value=valor; return option;
+    }));
+  };
+  preencher('marca',[...Object.keys(catalogo),...records.map(m=>m.marca)]);
+  preencher('modelo',[...(catalogo[chave]||[]),...records.filter(m=>normalizar(m.marca)===marca).map(m=>m.modelo)]);
+}
+async function openForm(record=null) {
   if (saving) return;
+  const atual=++aberturaCadastro;
   editingId=record ? record.id : null;
   $('record-form').reset();
   $('form-error').hidden=true;
   document.querySelectorAll('.field-error').forEach(el=>el.textContent='');
+  if(section==='produtos')preencherUnidades(record?.unidadeMedida);
   definitions[section].fields.forEach(([name])=> {
     const input=$('field-'+name);
     input.removeAttribute('aria-invalid');
@@ -178,8 +223,36 @@ function openForm(record=null) {
   }
   );
   $('form-title').textContent=(record?'Editar ':'Novo cadastro de ')+definitions[section].singular;
+  atualizarSugestoesMoto();
   dialog.showModal();
   $('form-fields').querySelector('input').focus();
+  if(section==='motocicletas') {
+    $('save-record').disabled=true;
+    const seletor=$('field-clienteId');
+    seletor.disabled=false;
+    seletor.replaceChildren(new Option('Carregando clientes…',''));
+    try {
+      const clientes=await api('/api/clientes');
+      if(!dialog.open || atual!==aberturaCadastro)return;
+      const anterior=seletor.closest('.form-field');
+      buscaProprietario?.elemento.remove();
+      buscaProprietario=criarBusca({nome:'cliente-proprietario',rotulo:'Cliente proprietário',registros:()=>clientes,descricao:c=>c.nome,chaves:c=>[c.id,c.nome]});
+      anterior?.remove();
+      $('form-fields').prepend(buscaProprietario.elemento);
+      // O select mantém o payload existente; a referência é escolhida pelo campo pesquisável.
+      seletor.hidden=true; seletor.required=false; $('form-fields').append(seletor);
+      buscaProprietario.selecionarId(record?.clienteId);
+      buscaProprietario.desabilitar(!!record?.clienteId);
+      $('save-record').disabled=!clientes.length;
+      if(!clientes.length) {
+        $('form-error').textContent='Cadastre um cliente antes de cadastrar a motocicleta.';
+        $('form-error').hidden=false;
+      }
+    } catch(error) {
+      if(!dialog.open || atual!==aberturaCadastro)return;
+      $('form-error').textContent=error.mensagem; $('form-error').hidden=false;
+    }
+  }
 }
 function renderRows() {
   const def=definitions[section];
@@ -191,7 +264,7 @@ function renderRows() {
     def.columns.forEach(([key,label,format])=> {
       const td=document.createElement('td');
       const value=record[key];
-      td.textContent=format==='money'?money.format(value):(value||'—');
+      td.textContent=format==='money'?money.format(value):(['estoque','empenho','saldo'].includes(key)?new Intl.NumberFormat('pt-BR',{maximumFractionDigits:3}).format(value??0):(value??'—'));
       tr.append(td);
     }
     );
@@ -202,9 +275,14 @@ function renderRows() {
     edit.type='button';
     edit.className='row-action';
     edit.textContent='Editar';
-    edit.setAttribute('aria-label','Editar '+(record.nome||record.placa||record.codigo));
+    edit.setAttribute('aria-label','Editar '+(record.nome||record.placa||record.chassi||record.codigo));
     edit.addEventListener('click',()=>openForm(record));
     actions.append(edit);
+    if(section==='produtos') {
+      const consultar=document.createElement('button'); consultar.type='button'; consultar.className='row-action'; consultar.textContent='Consultar estoque';
+      consultar.setAttribute('aria-label','Consultar estoque do produto '+record.codigo);
+      consultar.addEventListener('click',()=>consultarEstoqueProduto(record.id,consultar)); actions.prepend(consultar);
+    }
     td.append(actions);
     tr.append(td);
     $('table-body').append(tr);
@@ -225,6 +303,7 @@ async function loadRecords() {
   $('refresh').disabled=true;
   try {
     records=await api('/api/'+section);
+    atualizarSugestoesMoto();
   }
   catch(error) {
     loadFailed=true;
@@ -239,17 +318,30 @@ async function loadRecords() {
 }
 async function saveRecord(event) {
   event.preventDefault();
+  if(saving||$('save-record').disabled)return;
   const form=event.target;
   $('form-error').hidden=true;
   document.querySelectorAll('.field-error').forEach(el=>el.textContent='');
   definitions[section].fields.forEach(([name])=>$('field-'+name).removeAttribute('aria-invalid'));
+  if(section==='motocicletas') {
+    if(!buscaProprietario?.validar())return;
+    ['placa','chassi'].forEach(name=>$('field-'+name).value=$('field-'+name).value.trim());
+    if(!$('field-placa').value && !$('field-chassi').value) {
+      $('form-error').textContent='Informe a placa ou o chassi.';
+      $('form-error').hidden=false;
+      $('field-placa').setAttribute('aria-invalid','true');
+      $('error-placa').textContent='Informe a placa ou preencha o chassi.';
+      $('field-placa').focus();
+      return;
+    }
+  }
   if(!form.reportValidity())return;
   const data= {
   }
   ;
   definitions[section].fields.forEach(([name,label,type])=> {
     const value=$('field-'+name).value.trim();
-    data[name]=type==='number'?(value===''?null:Number(value)):value;
+    data[name]=name==='clienteId'&&buscaProprietario?buscaProprietario.valor():name==='unidadeMedida'?value:['number','select'].includes(type)?(value===''?null:Number(value)):value;
   }
   );
   const button=$('save-record');
@@ -310,7 +402,7 @@ document.addEventListener('keydown',event=> {
 if(section==='inicio') {
   buildDashboard();
 }
-else {
+else if(definitions[section]?.fields) {
   const def=definitions[section];
   document.title=def.title+' · OFICYNIC';
   $('breadcrumb').textContent=def.title;

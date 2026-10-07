@@ -3,7 +3,7 @@ package br.com.oficynic.ofinyc_api.model;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import jakarta.persistence.*;
 import jakarta.validation.constraints.*;
-import java.math.BigDecimal;
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
@@ -19,14 +19,12 @@ public class Motocicleta {
     @JsonProperty(access = JsonProperty.Access.READ_ONLY)
     private Long id;
 
-    @NotBlank(message = "Informe a placa.")
     @Pattern(regexp = "[A-Za-z0-9]{7}", message = "Informe a placa com 7 letras e números, sem hífen.")
-    @Column(nullable = false, unique = true, length = 7)
+    @Column(unique = true, length = 7)
     private String placa;
 
-    @NotBlank(message = "Informe o chassi.")
     @Pattern(regexp = "[A-Za-z0-9]{17}", message = "Informe os 17 caracteres do chassi.")
-    @Column(nullable = false, unique = true, length = 17)
+    @Column(unique = true, length = 17)
     private String chassi;
 
     @NotBlank(message = "Informe a marca.")
@@ -49,12 +47,30 @@ public class Motocicleta {
     @Column(length = 50)
     private String cor;
 
+    @ManyToOne
+    @JoinColumn(name = "cliente_id")
+    @JsonIgnore
+    private Cliente cliente;
+
+    @Transient
+    @Positive(message = "Selecione um cliente válido.")
+    private Long clienteId;
+
+    public Long getClienteId() {
+        return cliente == null ? clienteId : cliente.getId();
+    }
+
+    @JsonProperty(access = JsonProperty.Access.READ_ONLY)
+    public String getClienteNome() {
+        return cliente == null ? null : cliente.getNome();
+    }
+
     public void setPlaca(String valor) {
-        this.placa = valor == null ? null : valor.trim().toUpperCase(java.util.Locale.ROOT);
+        this.placa = valor == null || valor.isBlank() ? null : valor.trim().toUpperCase(java.util.Locale.ROOT);
     }
 
     public void setChassi(String valor) {
-        this.chassi = valor == null ? null : valor.trim().toUpperCase(java.util.Locale.ROOT);
+        this.chassi = valor == null || valor.isBlank() ? null : valor.trim().toUpperCase(java.util.Locale.ROOT);
     }
 
     public void setMarca(String valor) {

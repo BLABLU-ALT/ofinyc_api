@@ -35,6 +35,26 @@ public class Produto {
     @Column(name = "preco_venda", nullable = false, precision = 14, scale = 2)
     private BigDecimal precoVenda;
 
+    @NotBlank(message = "Informe a unidade de medida.")
+    @Size(max = 12)
+    @Column(name = "unidade_medida", length = 12)
+    private String unidadeMedida;
+
+    @JsonProperty(access = JsonProperty.Access.READ_ONLY)
+    @Column(nullable = false, precision = 15, scale = 3)
+    private BigDecimal estoque = new BigDecimal("0.000");
+
+    @Transient
+    @JsonProperty(access = JsonProperty.Access.READ_ONLY)
+    private BigDecimal empenho = new BigDecimal("0.000");
+
+    @JsonProperty(access = JsonProperty.Access.READ_ONLY)
+    public BigDecimal getSaldo() { return estoque.subtract(empenho); }
+
+    public void setUnidadeMedida(String valor) {
+        this.unidadeMedida = valor == null ? null : valor.trim().toUpperCase(java.util.Locale.ROOT);
+    }
+
     public void setCodigo(String valor) {
         this.codigo = valor == null ? null : valor.trim().toUpperCase(java.util.Locale.ROOT);
     }

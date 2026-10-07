@@ -211,7 +211,43 @@ dialog::backdrop { background: #152c434d; }
   display: none;
 }
 
-/* No login, o cabeçalho mostra apenas o nome do sistema. */
-.login-page .brand-mark, .login-page .brand small {
+/* A marca mostra apenas o nome do sistema. */
+.brand-mark, .brand small {
   display: none;
 }
+
+/* Abertura e consulta da ordem de serviço. */
+textarea { width: 100%; padding: 8px; border: 1px solid #9facb9; font: inherit; resize: vertical; }
+.os-detalhe { min-width: 0; }
+.os-detalhe.wide { grid-column: 1 / -1; }
+.os-detalhe p { margin: 5px 0 0; white-space: pre-wrap; overflow-wrap: anywhere; }
+.form-field [aria-invalid=true] { border-color: #b44343; }
+.wide { grid-column: 1 / -1; }
+.os-item, .os-adicionar { padding: 12px; border: 1px solid #ccd5de; margin-top: 10px; }
+.os-item label, .os-adicionar label { display: block; margin: 8px 0; }
+.os-item .button, .os-acoes .button { margin: 4px; }
+.os-acoes { display: flex; flex-wrap: wrap; gap: 6px; }
+textarea:focus-visible { outline: 2px solid #176db0; outline-offset: 2px; }
+
+/* Tela da OS e pesquisas de referências. */
+.lookup-field { position: relative; }
+.lookup-field input { padding-right: 42px; }
+.lookup-button { position: absolute; right: 1px; top: 1px; bottom: 1px; width: 36px; border: 0; border-left: 1px solid #9facb9; background: #e8edf2; font-size: 24px; }
+.lookup-dialog { width: 680px; }
+.lookup-dialog .table-scroll { margin-top: 12px; max-height: 40dvh; }
+.os-panel { background: white; border: 1px solid #b7c1cc; padding: 16px; margin: 14px 0; min-width: 0; }
+.os-panel h2 { margin-bottom: 14px; }
+.os-toolbar { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin: 12px 0; }
+.os-header-grid { display: grid; grid-template-columns: repeat(3,minmax(0,1fr)); gap: 14px; }
+.os-add-grid { display: grid; grid-template-columns: 130px minmax(180px,2fr) minmax(100px,1fr) minmax(130px,1fr); align-items: start; gap: 14px; }
+.os-totals { display: grid; grid-template-columns: repeat(3,minmax(0,1fr)); gap: 10px; margin: 14px 0; }
+.os-totals > div { padding: 12px; background: #e3ebf3; border: 1px solid #b7c1cc; min-width: 0; overflow-wrap: anywhere; }
+.os-totals span, .os-totals strong { display: block; }
+.os-totals strong { margin-top: 5px; font-size: 19px; }
+.status-label { padding: 7px 12px; font-weight: bold; background: #dfe6ed; }
+#os-items-body input { min-width: 90px; }
+#os-items-body .button { margin: 2px; }
+.stock-os-link { text-decoration: underline; color: #124e7c; }
+.row-actions { gap: 5px; flex-wrap: wrap; }
+@media (max-width: 1050px) { .os-header-grid, .os-add-grid { grid-template-columns: repeat(2,minmax(0,1fr)); } }
+@media (max-width: 600px) { .os-header-grid, .os-add-grid, .os-totals { grid-template-columns: 1fr; } .os-panel { padding: 10px; } }

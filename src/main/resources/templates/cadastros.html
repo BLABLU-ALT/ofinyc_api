@@ -5,9 +5,15 @@
   <title>OFICYNIC · Cadastros</title>
   <meta name="csrf-token" th:content="${_csrf.token}"><meta name="csrf-header" th:content="${_csrf.headerName}">
   <link rel="stylesheet" th:href="@{/css/app.css}">
+  <script th:if="${secao == 'motocicletas'}" th:src="@{/js/catalogo-motos.js}" defer></script>
   <script th:src="@{/js/app.js}" defer></script>
+  <script th:src="@{/js/busca.js}" defer></script>
+  <script th:src="@{/js/consulta-produto.js}" defer></script>
+  <script th:if="${secao == 'ordens-servico'}" th:src="@{/js/ordens-servico.js}" defer></script>
+  <script th:if="${secao == 'os-detalhe'}" th:src="@{/js/os-detalhe.js}" defer></script>
+  <script th:if="${secao == 'estoque'}" th:src="@{/js/estoque.js}" defer></script>
 </head>
-<body th:attr="data-secao=${secao}">
+<body th:attr="data-secao=${secao},data-ordem-id=${ordemId}">
 <a class="skip" href="#conteudo">Pular para o conteúdo</a>
 <button class="menu-toggle" id="menu-toggle" aria-expanded="false" aria-controls="sidebar" aria-label="Abrir menu">☰</button>
 <aside class="sidebar" id="sidebar">
@@ -15,11 +21,14 @@
   <div class="nav-label">ESPAÇO DE TRABALHO</div>
   <nav aria-label="Menu principal">
     <a th:href="@{/}" th:classappend="${secao == 'inicio'} ? 'active'" th:attr="aria-current=${secao == 'inicio' ? 'page' : null}"><span class="nav-icon">⌂</span>Visão geral</a>
+    <a th:href="@{/ordens-servico}" th:classappend="${secao == 'ordens-servico' or secao == 'os-detalhe'} ? 'active'" th:attr="aria-current=${secao == 'ordens-servico' or secao == 'os-detalhe' ? 'page' : null}"><span class="nav-icon">▤</span>Ordens de serviço</a>
     <div class="nav-divider"></div><div class="nav-label">CADASTROS</div>
     <a th:href="@{/clientes}" th:classappend="${secao == 'clientes'} ? 'active'" th:attr="aria-current=${secao == 'clientes' ? 'page' : null}"><span class="nav-icon">◉</span>Clientes</a>
     <a th:href="@{/motocicletas}" th:classappend="${secao == 'motocicletas'} ? 'active'" th:attr="aria-current=${secao == 'motocicletas' ? 'page' : null}"><span class="nav-icon">◇</span>Motocicletas</a>
     <a th:href="@{/produtos}" th:classappend="${secao == 'produtos'} ? 'active'" th:attr="aria-current=${secao == 'produtos' ? 'page' : null}"><span class="nav-icon">▧</span>Produtos</a>
     <a th:href="@{/servicos}" th:classappend="${secao == 'servicos'} ? 'active'" th:attr="aria-current=${secao == 'servicos' ? 'page' : null}"><span class="nav-icon">⚒</span>Serviços</a>
+    <a th:href="@{/funcionarios}" th:classappend="${secao == 'funcionarios'} ? 'active'">Funcionários</a>
+    <a th:href="@{/estoque}" th:classappend="${secao == 'estoque'} ? 'active'">Estoque</a>
   </nav>
   <div class="sidebar-bottom"><span class="status-dot"></span> Seu espaço de trabalho<small>OFICYNIC · Versão de estudo</small></div>
 </aside>
@@ -40,6 +49,17 @@
       <div class="empty-state" id="empty-state" hidden><span class="empty-symbol" aria-hidden="true">＋</span><h2 id="empty-title">Seu primeiro cadastro começa aqui</h2><p id="empty-description">Adicione um registro para começar a organizar sua oficina.</p><button class="button primary" id="empty-add" type="button">Criar primeiro cadastro</button></div>
       <div id="loading" class="loading" role="status">Carregando cadastros…</div>
       <footer class="list-footer"><span id="record-count">Aguardando dados</span><span>OFICYNIC</span></footer>
+    </section>
+    <section id="os-workspace" th:if="${secao == 'os-detalhe'}" hidden aria-label="Dados e itens da ordem de serviço">
+      <div class="os-toolbar"><a class="button" th:href="@{/ordens-servico}">← Lista de OS</a><span id="os-status" class="status-label"></span><button class="button" id="os-reload" type="button">Atualizar</button></div>
+      <section class="os-panel" aria-labelledby="os-header-title"><h2 id="os-header-title">Cabeçalho da OS</h2><p id="os-info" role="status"></p><form id="os-header-form" novalidate><div id="os-header-fields" class="os-header-grid"></div><div class="os-toolbar"><button id="os-save-header" class="button primary" type="submit">Salvar cabeçalho</button><div id="os-state-actions" class="os-toolbar"></div></div></form></section>
+      <section id="os-totals" class="os-totals" aria-label="Totais da OS"></section>
+      <section class="os-panel" aria-labelledby="os-items-title"><h2 id="os-items-title">Itens da OS</h2><div class="table-scroll"><table><thead><tr><th scope="col">Item</th><th scope="col">Tipo</th><th scope="col">Código</th><th scope="col">Descrição</th><th scope="col">Quantidade</th><th scope="col">Unidade</th><th scope="col">Valor unitário</th><th scope="col">Subtotal</th><th scope="col">Ações</th></tr></thead><tbody id="os-items-body"></tbody></table></div><p id="os-items-empty" hidden>Nenhum item adicionado.</p></section>
+      <section id="os-add-panel" class="os-panel" aria-labelledby="os-add-title"><h2 id="os-add-title">Adicionar item</h2><form id="os-add-form" class="os-add-grid" novalidate><div class="form-field"><label for="os-add-type">Tipo</label><select id="os-add-type"><option value="servicos">Serviço</option><option value="produtos">Produto</option></select></div><div id="os-add-reference"></div><div class="form-field"><label for="os-add-quantity">Quantidade *</label><input id="os-add-quantity" type="number" min="1" step="1" value="1" required></div><div class="form-field"><label for="os-add-price">Valor unitário (R$) *</label><input id="os-add-price" type="number" min="0" max="999999999999.99" step="0.01" value="0" required></div><button id="os-add-button" class="button primary" type="submit">Adicionar item</button></form><p id="os-add-info" role="status"></p></section>
+    </section>
+    <section id="stock-workspace" th:if="${secao == 'estoque'}" hidden>
+      <section class="os-panel"><h2>Registrar movimentação</h2><form id="stock-form" novalidate><div id="stock-fields" class="os-header-grid"></div><div class="os-toolbar"><button id="stock-save" class="button primary" type="submit">Registrar movimentação</button><button id="stock-reload" class="button" type="button">Atualizar histórico</button></div></form></section>
+      <section class="os-panel"><h2>Histórico de estoque</h2><div class="table-scroll"><table><thead><tr><th scope="col">Nº</th><th scope="col">Data</th><th scope="col">Produto</th><th scope="col">Tipo</th><th scope="col">Quantidade</th><th scope="col">Unidade</th><th scope="col">Responsável</th><th scope="col">Usuário</th><th scope="col">Motivo</th><th scope="col">OS</th></tr></thead><tbody id="stock-body"></tbody></table></div><p id="stock-empty" hidden>Nenhuma movimentação registrada.</p></section>
     </section>
     <footer class="page-footer">Feito para o dia a dia da sua oficina.<span>Cadastros · OFICYNIC</span></footer>
     <noscript><p class="notice error">Ative o JavaScript para consultar e salvar os cadastros.</p></noscript>

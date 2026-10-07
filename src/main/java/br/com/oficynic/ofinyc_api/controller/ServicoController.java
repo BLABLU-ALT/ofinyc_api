@@ -34,7 +34,6 @@ public class ServicoController {
     @PostMapping
     public ResponseEntity<Servico> cadastrar(@Valid @RequestBody Servico dados) {
         dados.setId(null);
-        verificarDuplicidade(dados, null);
         Servico salvo = repository.saveAndFlush(dados);
         return ResponseEntity.created(URI.create("/api/servicos/" + salvo.getId())).body(salvo);
     }
@@ -42,7 +41,6 @@ public class ServicoController {
     @PutMapping("/{id}")
     public Servico atualizar(@PathVariable Long id, @Valid @RequestBody Servico dados) {
         Servico existente = buscar(id);
-        verificarDuplicidade(dados, id);
         // Copia somente os campos editáveis do formulário.
         existente.setNome(dados.getNome());
         existente.setDescricao(dados.getDescricao());
@@ -51,7 +49,4 @@ public class ServicoController {
     }
 
 
-    private void verificarDuplicidade(Servico dados, Long id) {
-
-    }
 }

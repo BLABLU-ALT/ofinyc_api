@@ -28,14 +28,20 @@ class CadastrosIntegrationTest {
     @Autowired MockMvc mvc;
     @Autowired JdbcTemplate jdbc;
 
+    private String comProprietario(String tabela, String body) {
+        if (!tabela.equals("motocicletas")) return body;
+        long cliente = jdbc.queryForObject("INSERT INTO clientes(nome,cpf) VALUES ('Proprietário teste','74000000000') RETURNING id", Long.class);
+        return body.replaceFirst("\\{", "{\"clienteId\":" + cliente + ",");
+    }
+
     static Stream<Arguments> cadastros() {
         return Stream.of(
             Arguments.of("clientes", "nome", "Cliente de teste", "Cliente editado",
-                "{\"nome\":\"Cliente de teste\",\"cpf\":\"12345678901\",\"email\":\"teste@example.com\"}"),
+                "{\"nome\":\"Cliente de teste\",\"cpf\":\"12345678909\",\"email\":\"teste@example.com\"}"),
             Arguments.of("motocicletas", "modelo", "Modelo teste", "Modelo editado",
                 "{\"placa\":\"ABC1D23\",\"chassi\":\"12345678901234567\",\"marca\":\"Marca teste\",\"modelo\":\"Modelo teste\",\"ano\":2024}"),
             Arguments.of("produtos", "descricao", "Produto teste", "Produto editado",
-                "{\"codigo\":\"P001\",\"descricao\":\"Produto teste\",\"precoVenda\":29.90}"),
+                "{\"codigo\":\"P001\",\"descricao\":\"Produto teste\",\"unidadeMedida\":\"UN\",\"precoVenda\":29.90}"),
             Arguments.of("servicos", "nome", "Serviço teste", "Serviço editado",
                 "{\"nome\":\"Serviço teste\",\"descricao\":\"Descrição teste\",\"preco\":50.00}")
         );
@@ -43,6 +49,7 @@ class CadastrosIntegrationTest {
 
     @ParameterizedTest @MethodSource("cadastros") @WithMockUser
     void cadastraConsultaEditaNoPostgres(String tabela, String campo, String antigo, String novo, String body) throws Exception {
+        body = comProprietario(tabela, body);
         String salvo = mvc.perform(post("/api/"+tabela).with(csrf()).contentType(MediaType.APPLICATION_JSON)
                 .content(body.replaceFirst("\\{", "{\"id\":999999,")))
                 .andExpect(status().isCreated()).andExpect(header().exists("Location"))
@@ -62,15 +69,16 @@ class CadastrosIntegrationTest {
 
     static Stream<Arguments> duplicidades() {
         return Stream.of(
-            Arguments.of("clientes","cpf","12345678901","12345678902", "{\"nome\":\"Teste\",\"cpf\":\"12345678901\"}"),
+            Arguments.of("clientes","cpf","12345678909","22345678909", "{\"nome\":\"Teste\",\"cpf\":\"12345678909\"}"),
             Arguments.of("motocicletas","placa","ABC1D23","XYZ9A87", "{\"placa\":\"ABC1D23\",\"chassi\":\"12345678901234567\",\"marca\":\"Marca\",\"modelo\":\"Modelo\",\"ano\":2024}"),
             Arguments.of("motocicletas","chassi","12345678901234567","98765432109876543", "{\"placa\":\"ABC1D23\",\"chassi\":\"12345678901234567\",\"marca\":\"Marca\",\"modelo\":\"Modelo\",\"ano\":2024}"),
-            Arguments.of("produtos","codigo","P001","P002", "{\"codigo\":\"P001\",\"descricao\":\"Produto\",\"precoVenda\":10.00}")
+            Arguments.of("produtos","codigo","P001","P002", "{\"codigo\":\"P001\",\"descricao\":\"Produto\",\"unidadeMedida\":\"UN\",\"precoVenda\":10.00}")
         );
     }
 
     @ParameterizedTest @MethodSource("duplicidades") @WithMockUser
     void impedeDuplicidadeCriacaoEEdicao(String tabela,String campo,String primeiro,String segundo,String body) throws Exception {
+        body = comProprietario(tabela, body);
         mvc.perform(post("/api/"+tabela).with(csrf()).contentType(MediaType.APPLICATION_JSON).content(body)).andExpect(status().isCreated());
         mvc.perform(post("/api/"+tabela).with(csrf()).contentType(MediaType.APPLICATION_JSON).content(body)).andExpect(status().isConflict());
         String outro=body.replace(primeiro,segundo);
@@ -105,7 +113,7 @@ class CadastrosIntegrationTest {
     void rejeitaPrecoNegativoEPrecisaoExcessiva() throws Exception {
         for(String preco:new String[]{"-1","1.234","1000000000000"}) {
             mvc.perform(post("/api/produtos").with(csrf()).contentType(MediaType.APPLICATION_JSON)
-                .content("{\"codigo\":\"P1\",\"descricao\":\"Teste\",\"precoVenda\":"+preco+"}"))
+                .content("{\"codigo\":\"P1\",\"descricao\":\"Teste\",\"unidadeMedida\":\"UN\",\"precoVenda\":"+preco+"}"))
                 .andExpect(status().isBadRequest());
         }
         assertEquals(0,jdbc.queryForObject("SELECT count(*) FROM produtos",Integer.class));

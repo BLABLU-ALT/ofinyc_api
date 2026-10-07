@@ -3,10 +3,12 @@ package br.com.oficynic.ofinyc_api.model;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import jakarta.persistence.*;
 import jakarta.validation.constraints.*;
-import java.math.BigDecimal;
+import java.util.ArrayList;
+import java.util.List;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
+import org.hibernate.validator.constraints.br.CPF;
 
 @Entity
 @Table(name = "clientes")
@@ -26,6 +28,8 @@ public class Cliente {
 
     @NotBlank(message = "Informe o CPF.")
     @Pattern(regexp = "[0-9]{11}", message = "Informe os 11 números do CPF.")
+    // Confere os dois dígitos verificadores e rejeita números repetidos.
+    @CPF(message = "CPF inválido. Confira os números informados.")
     @Column(nullable = false, unique = true, length = 11)
     private String cpf;
 
@@ -41,6 +45,10 @@ public class Cliente {
     @Size(max = 255)
     @Column(length = 255)
     private String endereco;
+
+    @OneToMany(mappedBy = "cliente")
+    @JsonProperty(access = JsonProperty.Access.READ_ONLY)
+    private List<OrdemServico> ordensServico = new ArrayList<>();
 
     public void setNome(String valor) {
         this.nome = valor == null ? null : valor.trim();
