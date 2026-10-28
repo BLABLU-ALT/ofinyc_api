@@ -35,7 +35,7 @@ class AberturaOrdemIntegrationTest {
     }
 
     private long funcionario() {
-        return jdbc.queryForObject("INSERT INTO funcionarios(nome) VALUES ('Responsável teste') RETURNING id", Long.class);
+        return jdbc.queryForObject("INSERT INTO usuarios(nome) VALUES ('Responsável teste') RETURNING id", Long.class);
     }
 
     private String dados(long cliente, long moto) {

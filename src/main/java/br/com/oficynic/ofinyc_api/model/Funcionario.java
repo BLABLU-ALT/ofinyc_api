@@ -1,14 +1,14 @@
 package br.com.oficynic.ofinyc_api.model;
 
-import jakarta.persistence.*;
-import lombok.*;
+import jakarta.persistence.DiscriminatorValue;
+import jakarta.persistence.Entity;
 
+// Perfil operacional: abre e acompanha OS, registra parecer técnico e itens.
 @Entity
-@Table(name = "funcionarios")
-@Getter @Setter @NoArgsConstructor
-public class Funcionario {
-    @Id @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long id;
-    @Column(nullable = false, length = 120)
-    private String nome;
+@DiscriminatorValue("FUNCIONARIO")
+public class Funcionario extends Usuario {
+    @Override
+    public String getPerfil() {
+        return "FUNCIONARIO";
+    }
 }

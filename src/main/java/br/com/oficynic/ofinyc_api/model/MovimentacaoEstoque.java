@@ -13,7 +13,7 @@ public class MovimentacaoEstoque {
     @ManyToOne(optional = false) @JoinColumn(name = "produto_id", nullable = false)
     private Produto produto;
     @ManyToOne(optional = false) @JoinColumn(name = "funcionario_id", nullable = false)
-    private Funcionario funcionario;
+    private Usuario funcionario;
     @ManyToOne @JoinColumn(name = "ordem_servico_id")
     private OrdemServico ordemServico;
     @Enumerated(EnumType.STRING) @Column(nullable = false, length = 10)

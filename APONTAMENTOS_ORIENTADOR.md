@@ -60,9 +60,16 @@ Legenda: `[ ]` pendente · `[x]` concluído e validado. Nenhum item é marcado s
 
 ## Etapa 5 — Controle de funcionários
 
-- [ ] REQ-12 — Funcionário ativo/inativo — em implementação (V11, `Usuario`).
-- [ ] REQ-13 — Ocultar inativos na abertura da OS
-- [ ] REQ-14 — Controle exclusivo do administrador
+- [x] REQ-12 — Funcionário ativo/inativo
+  - Arquivos: `V11__usuarios_tabela_unica.sql` (`funcionarios` → `usuarios` + `tipo`, `login`, `senha`, `ativo`), `Usuario` (abstrata), `Administrador`, `Funcionario`, `UsuarioRepository` (substitui `FuncionarioRepository`), `OrdemServico`, `MovimentacaoEstoque`, `FuncionarioController`, `app.js`.
+  - Implementado: situação Ativo/Inativo no cadastro; ninguém é excluído; dados existentes viram FUNCIONARIO ativo sem login.
+  - Validação: `ApontamentosIntegrationTest.somenteAdministradorGerenciaFuncionarios`, `LoginUsuarioIntegrationTest.usuarioInativoNaoEntra`, migrações V1→V11.
+- [x] REQ-13 — Ocultar inativos na abertura da OS
+  - Implementado: `GET /api/funcionarios/ativos` alimenta abertura de OS, cabeçalho e estoque; backend rejeita (409) inativo em nova OS, troca de responsável, movimentação manual; retrabalho não herda responsável inativo; OS antiga mantém e exibe o responsável inativo.
+  - Validação: `inativoSaiDaSelecaoMasPermaneceNasOsAntigas`.
+- [x] REQ-14 — Controle exclusivo do administrador
+  - Implementado: `/funcionarios` e `/api/funcionarios/**` só ADMINISTRADOR (`SecurityConfig`); menu oculto ao funcionário; login pelo banco com BCrypt; conta técnica = administrador; perfil fixado no cadastro; senha nunca devolvida.
+  - Validação: 403 do funcionário em GET/POST/PUT e na página; login real por formulário (`LoginUsuarioIntegrationTest`: funcionário, administrador, inativo, URL direta, login reservado).
 
 ## Etapa 6 — Interface, ícones e navegação
 
@@ -89,10 +96,11 @@ Legenda: `[ ]` pendente · `[x]` concluído e validado. Nenhum item é marcado s
 |---|---|---|
 | 27/10 | `iniciar-local.ps1 -Teste` (linha de base) | 130 testes, 0 falhas |
 | 28/10 | `iniciar-local.ps1 -Teste` (Etapas 3–4) | 135 testes, 0 falhas |
+| 28/10 | `iniciar-local.ps1 -Teste` (Etapa 5) | 142 testes, 0 falhas |
 
-Ajustes em testes existentes: passaram a rodar como `ADMINISTRADOR` (catálogo agora é administrativo); contagens de migração +1 (V10); o teste de reserva deixou de enviar preço injetado, porque o REQ-11 passou a aceitar valor informado.
+Ajustes em testes existentes: passaram a rodar como `ADMINISTRADOR` (catálogo agora é administrativo); contagens de migração +1 a cada nova migração (V10, V11); o teste antigo que proibia login no cadastro de funcionário foi adaptado à decisão de 28/10 (login exige senha, perfil fixo); o teste de reserva deixou de enviar preço injetado, porque o REQ-11 passou a aceitar valor informado.
 
 ## Última atividade e próximo passo
 
-- Última atividade: Etapas 3 e 4 concluídas e testadas; iniciada a Etapa 5 (V11, `Usuario`, `Administrador`, `Funcionario`, `UsuarioRepository`).
-- Próximo passo: concluir a Etapa 5 (serviços, controller, segurança, tela, testes de login e perfis).
+- Última atividade: Etapa 5 concluída e testada (142/142).
+- Próximo passo: Etapa 6 — ícones (REQ-15), navegação e aba Relatórios (REQ-16), Visão Geral com clientes e veículos (REQ-17).

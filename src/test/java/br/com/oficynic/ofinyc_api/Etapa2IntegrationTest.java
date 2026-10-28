@@ -117,7 +117,7 @@ class Etapa2IntegrationTest {
         int ordensAntes = jdbc.queryForObject("SELECT count(*) FROM ordens_servico", Integer.class);
         long moto = cadastrarMotoSemProprietario("ETP2B01");
         long cliente = cadastrarCliente("52998224725", "Cliente da OS");
-        long funcionario = jdbc.queryForObject("INSERT INTO funcionarios(nome) VALUES ('Responsável Etapa 2') RETURNING id", Long.class);
+        long funcionario = jdbc.queryForObject("INSERT INTO usuarios(nome) VALUES ('Responsável Etapa 2') RETURNING id", Long.class);
         String os = "{\"descricao\":\"Revisão Etapa 2\",\"clienteId\":" + cliente
                 + ",\"motocicletaId\":" + moto + ",\"funcionarioId\":" + funcionario + "}";
 

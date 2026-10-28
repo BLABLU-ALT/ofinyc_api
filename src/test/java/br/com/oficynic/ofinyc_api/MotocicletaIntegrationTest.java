@@ -147,7 +147,7 @@ class MotocicletaIntegrationTest {
     void abreEConsultaOsDeMotoSemPlaca() throws Exception {
         long moto = criar("\"chassi\":\"ABCDEF12345678901\",");
         long cliente = cliente();
-        long funcionario = jdbc.queryForObject("INSERT INTO funcionarios(nome) VALUES ('Responsável teste') RETURNING id", Long.class);
+        long funcionario = jdbc.queryForObject("INSERT INTO usuarios(nome) VALUES ('Responsável teste') RETURNING id", Long.class);
         String json = mvc.perform(post("/api/ordens-servico/abertura").with(csrf()).contentType(MediaType.APPLICATION_JSON)
                 .content("{\"descricao\":\"Revisão\",\"clienteId\":" + cliente + ",\"motocicletaId\":" + moto + ",\"funcionarioId\":" + funcionario + "}"))
                 .andExpect(status().isCreated()).andExpect(jsonPath("$.placa").isEmpty())

@@ -67,7 +67,7 @@ public class OrdemServico {
     @ManyToOne
     @JoinColumn(name = "funcionario_id")
     @JsonIgnore
-    private Funcionario funcionario;
+    private Usuario funcionario; // responsável pelo atendimento (funcionário ou administrador)
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 20)

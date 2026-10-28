@@ -43,7 +43,7 @@ class FluxoOsIntegrationTest {
         for(long id:motos)jdbc.update("DELETE FROM motocicletas WHERE id=?",id);
         for(long id:servicos)jdbc.update("DELETE FROM servicos WHERE id=?",id);
         for(long id:clientes)jdbc.update("DELETE FROM clientes WHERE id=?",id);
-        for(long id:funcionarios)jdbc.update("DELETE FROM funcionarios WHERE id=?",id);
+        for(long id:funcionarios)jdbc.update("DELETE FROM usuarios WHERE id=?",id);
     }
     private String postJson(String rota,String body,int status) throws Exception {
         return mvc.perform(post(rota).with(csrf()).contentType(MediaType.APPLICATION_JSON).content(body))
@@ -61,7 +61,7 @@ class FluxoOsIntegrationTest {
     }
     private long funcionario() {
         if(!funcionarios.isEmpty()) return funcionarios.get(0);
-        long id=jdbc.queryForObject("INSERT INTO funcionarios(nome) VALUES ('Responsável protótipo') RETURNING id",Long.class); funcionarios.add(id); return id;
+        long id=jdbc.queryForObject("INSERT INTO usuarios(nome) VALUES ('Responsável protótipo') RETURNING id",Long.class); funcionarios.add(id); return id;
     }
     private String dados(long cliente,long moto) { return "{\"descricao\":\"Revisão\",\"dataAbertura\":\"2026-10-01\",\"clienteId\":"+cliente+",\"motocicletaId\":"+moto+",\"funcionarioId\":"+funcionario()+"}"; }
     private long ordem() throws Exception {

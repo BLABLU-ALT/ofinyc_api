@@ -56,7 +56,7 @@ class EstoqueOsIntegrationTest {
         }
         for (long produto : produtos) { jdbc.update("DELETE FROM movimentacoes_estoque WHERE produto_id=?", produto); jdbc.update("DELETE FROM produtos WHERE id=?", produto); }
         jdbc.update("DELETE FROM motocicletas WHERE id=?", moto); jdbc.update("DELETE FROM clientes WHERE id=?", cliente);
-        jdbc.update("DELETE FROM servicos WHERE id=?", servico); jdbc.update("DELETE FROM funcionarios WHERE id=?", funcionario);
+        jdbc.update("DELETE FROM servicos WHERE id=?", servico); jdbc.update("DELETE FROM usuarios WHERE id=?", funcionario);
     }
     private String postJson(String url, String corpo, int esperado) throws Exception {
         return mvc.perform(post(url).with(csrf()).contentType(MediaType.APPLICATION_JSON).content(corpo))
@@ -169,7 +169,8 @@ class EstoqueOsIntegrationTest {
         mvc.perform(get("/api/produtos/"+antigo)).andExpect(jsonPath("$.unidadeMedida").isEmpty());movimento(antigo,"ENTRADA","1",409);
     }
 
-    @Test void contratosProtegidosECadastroFuncionarioNaoCriaLogin() throws Exception {
+    // Login exige senha; o perfil é fixado no cadastro e a senha nunca sai na resposta (REQ-14).
+    @Test void contratosProtegidosEPerfilFixadoNoCadastro() throws Exception {
         long p=produto("1","UN"), os=ordem();
         for(String url:List.of("/api/funcionarios","/api/estoque/movimentos","/api/produtos/"+p+"/estoque"))
             mvc.perform(get(url).with(anonymous())).andExpect(status().isUnauthorized());
@@ -179,8 +180,10 @@ class EstoqueOsIntegrationTest {
         }
         mvc.perform(post("/api/estoque/movimentos").contentType(MediaType.APPLICATION_JSON).content("{}")) .andExpect(status().isForbidden());
         mvc.perform(post("/api/ordens-servico/"+os+"/produtos").contentType(MediaType.APPLICATION_JSON).content("{}")) .andExpect(status().isForbidden());
-        putJson("/api/funcionarios/"+funcionario,"{\"nome\":\"Nome atualizado\",\"login\":\"injetado\",\"perfil\":\"ADMINISTRADOR\"}",200);
-        mvc.perform(get("/api/funcionarios/"+funcionario)).andExpect(jsonPath("$.login").doesNotExist()).andExpect(jsonPath("$.perfil").doesNotExist());
+        putJson("/api/funcionarios/"+funcionario,"{\"nome\":\"Nome atualizado\",\"login\":\"injetado\",\"perfil\":\"ADMINISTRADOR\"}",400);
+        putJson("/api/funcionarios/"+funcionario,"{\"nome\":\"Nome atualizado\",\"perfil\":\"ADMINISTRADOR\"}",200);
+        mvc.perform(get("/api/funcionarios/"+funcionario)).andExpect(jsonPath("$.login").isEmpty())
+                .andExpect(jsonPath("$.perfil").value("FUNCIONARIO")).andExpect(jsonPath("$.senha").doesNotExist());
         postJson("/api/funcionarios","{\"nome\":\" \"}",400);
     }
 
@@ -281,7 +284,7 @@ class EstoqueOsIntegrationTest {
                 "INSERT INTO itens_produto_os(ordem_servico_id,produto_id,quantidade,valor_unitario,unidade_medida) VALUES ("+os+",999999999,1,1,'UN')",
                 "INSERT INTO itens_produto_os(ordem_servico_id,produto_id,quantidade,valor_unitario,unidade_medida) VALUES ("+os+","+p+",1,1,' ')",
                 "INSERT INTO movimentacoes_estoque(produto_id,funcionario_id,tipo,quantidade,unidade_medida,data,motivo,usuario_atuante) VALUES ("+p+","+funcionario+",'ENTRADA',1,'UN',CURRENT_TIMESTAMP,' ','teste')",
-                "DELETE FROM funcionarios WHERE id="+funcionario))
+                "DELETE FROM usuarios WHERE id="+funcionario))
             assertThrows(RuntimeException.class,()->tx.execute(status->{jdbc.execute(sql);return null;}));
         saldos(p,"0","0");
     }

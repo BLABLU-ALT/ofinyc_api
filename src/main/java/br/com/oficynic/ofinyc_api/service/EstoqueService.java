@@ -16,10 +16,10 @@ import jakarta.persistence.LockModeType;
 @Service @Transactional
 public class EstoqueService {
     private final ProdutoRepository produtos;
-    private final FuncionarioRepository funcionarios;
+    private final UsuarioRepository funcionarios;
     private final MovimentacaoEstoqueRepository movimentos;
     private final EntityManager entityManager;
-    public EstoqueService(ProdutoRepository produtos, FuncionarioRepository funcionarios, MovimentacaoEstoqueRepository movimentos, EntityManager entityManager) {
+    public EstoqueService(ProdutoRepository produtos, UsuarioRepository funcionarios, MovimentacaoEstoqueRepository movimentos, EntityManager entityManager) {
         this.produtos = produtos; this.funcionarios = funcionarios; this.movimentos = movimentos;
         this.entityManager = entityManager;
     }
@@ -29,6 +29,7 @@ public class EstoqueService {
                                          BigDecimal quantidade, String motivo, String usuario) {
         var produto = bloquearProduto(produtoId);
         var funcionario = funcionarios.findById(funcionarioId).orElseThrow(() -> erro(HttpStatus.NOT_FOUND, "Funcionário não encontrado."));
+        if (!funcionario.isAtivo()) throw erro(HttpStatus.CONFLICT, "Funcionário inativo não pode registrar movimentações.");
         var movimento = registrar(produto, funcionario, null, tipo, quantidade, motivo.trim(), usuario);
         produtos.flush();
         return movimento;
@@ -41,7 +42,7 @@ public class EstoqueService {
         return produto;
     }
     // O chamador mantém o bloqueio do produto e a mesma transação da OS.
-    public MovimentacaoEstoque registrar(Produto produto, Funcionario funcionario, OrdemServico ordem,
+    public MovimentacaoEstoque registrar(Produto produto, Usuario funcionario, OrdemServico ordem,
                                         TipoMovimentacao tipo, BigDecimal quantidade, String motivo, String usuario) {
         if (produto.getUnidadeMedida() == null || produto.getUnidadeMedida().isBlank())
             throw erro(HttpStatus.CONFLICT, "Complete a unidade de medida no cadastro do produto.");

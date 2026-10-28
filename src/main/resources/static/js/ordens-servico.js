@@ -76,8 +76,8 @@
     if(saving||dialog.open)return;const atual=++geracao;$('record-form').reset();$('form-fields').replaceChildren();$('form-error').hidden=true;
     $('form-title').textContent='Abrir ordem de serviço';$('form-description').textContent='Carregando cadastros…';$('save-record').disabled=true;$('save-record').hidden=false;$('save-record').textContent='Abrir OS';$('clear-record').hidden=false;limparRapido=null;dialog.showModal();
     try{
-      const [clientes,motos,funcionarios,dataServidor]=await Promise.all([api('/api/clientes'),api('/api/motocicletas'),api('/api/funcionarios'),api('/api/ordens-servico/data-atual')]);if(atual!==geracao||!dialog.open)return;
-      if(!funcionarios.length){$('form-description').textContent='Cadastre um funcionário responsável antes de abrir uma OS.';return;}
+      const [clientes,motos,funcionarios,dataServidor]=await Promise.all([api('/api/clientes'),api('/api/motocicletas'),api('/api/funcionarios/ativos'),api('/api/ordens-servico/data-atual')]);if(atual!==geracao||!dialog.open)return;
+      if(!funcionarios.length){$('form-description').textContent='Não há funcionário ativo. Peça ao administrador para cadastrar ou reativar um responsável.';return;}
       cliente=criarBusca({nome:'os-cliente',rotulo:'Cliente',registros:()=>clientes,descricao:c=>c.nome,chaves:c=>[c.id,c.nome],aoSelecionar:()=>moto?.limpar()});
       moto=criarBusca({nome:'os-moto',rotulo:'Motocicleta',registros:()=>motos.filter(m=>String(m.clienteId)===String(cliente.valor())),descricao:m=>(m.placa||m.chassi)+' · '+m.marca+' '+m.modelo,chaves:m=>[m.id,m.placa,m.chassi,m.marca+' '+m.modelo]});
       funcionario=criarBusca({nome:'os-funcionario',rotulo:'Funcionário responsável',registros:()=>funcionarios,descricao:f=>f.nome,chaves:f=>[f.id,f.nome]});

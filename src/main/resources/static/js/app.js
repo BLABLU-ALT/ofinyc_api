@@ -21,7 +21,11 @@ const definitions = {
   }
   ,
   funcionarios: {
-    title:'Funcionários',singular:'funcionário',description:'Responsáveis pelos atendimentos e movimentações.',icon:'◉',hint:'Cadastre os responsáveis.',searchKeys:['nome'],searchPlaceholder:'Pesquisar por nome',defaultSort:'nome:asc',sorts:[['nome:asc','Nome (A–Z)'],['nome:desc','Nome (Z–A)']],columns:[['id','Código'],['nome','Nome']],fields:[['nome','Nome completo','text',true,120,'wide']]
+    title:'Funcionários',singular:'funcionário',description:'Responsáveis pelos atendimentos e movimentações.',icon:'◉',hint:'Cadastre os responsáveis.',searchKeys:['nome'],searchPlaceholder:'Pesquisar por nome',defaultSort:'nome:asc',sorts:[['nome:asc','Nome (A–Z)'],['nome:desc','Nome (Z–A)']],columns:[['id','Código'],['nome','Nome'],['login','Login'],['perfil','Perfil','perfil'],['ativo','Situação','ativo']],fields:[['nome','Nome completo','text',true,120,'wide'],
+    ['perfil','Perfil','select',true,null,'','Definido no cadastro; não muda na edição.',[['FUNCIONARIO','Funcionário'],['ADMINISTRADOR','Administrador']],'FUNCIONARIO'],
+    ['ativo','Situação','select',true,null,'','Inativos não entram no sistema nem recebem novas OS.',[['true','Ativo'],['false','Inativo']],'true'],
+    ['login','Login de acesso','text',false,60,'','Deixe em branco para quem não acessa o sistema.'],
+    ['senha','Senha','password',false,72,'','Mínimo de 6 caracteres. Na edição, deixe em branco para manter.']]
   },
   servicos: {
     title:'Serviços',singular:'serviço',description:'Os serviços que a sua oficina oferece.',icon:'⚒',hint:'Mantenha os serviços e valores atualizados.',searchKeys:['id','nome','descricao'],searchPlaceholder:'Pesquisar por código, nome ou descrição',defaultSort:'nome:asc',sorts:[['nome:asc','Nome (A–Z)'],['nome:desc','Nome (Z–A)'],['preco:asc','Menor valor'],['preco:desc','Maior valor']],columns:[['id','Código'],['nome','Serviço'],['descricao','Descrição'],['preco','Preço','money']],fields:[
@@ -152,7 +156,7 @@ function buildDashboard() {
   });
 }
 function addField(field) {
-  const [name,label,type,required,maxLength,width,help]=field;
+  const [name,label,type,required,maxLength,width,help,opcoes]=field;
   const wrap=document.createElement('div');
   wrap.className='form-field'+(width==='wide'?' wide':'');
   const labelEl=document.createElement('label');
@@ -181,6 +185,8 @@ function addField(field) {
     input.inputMode='numeric';
   }
   if(name==='placa')input.pattern='[A-Za-z0-9]{7}';
+  if(opcoes)opcoes.forEach(([valor,rotulo])=>input.append(new Option(rotulo,valor)));
+  if(type==='password')input.autocomplete='new-password';
   if(name==='chassi')input.pattern='[A-Za-z0-9]{17}';
   const err=document.createElement('span');
   err.className='field-error';
@@ -231,8 +237,8 @@ function atualizarSugestoesMoto() {
 }
 function limparNovoCadastro() {
   if(saving || editingId || somenteConsulta || !dialog.open || $('save-record').disabled)return;
-  definitions[section].fields.forEach(([nome])=>{
-    const input=$('field-'+nome);input.value='';input.setCustomValidity('');input.removeAttribute('aria-invalid');
+  definitions[section].fields.forEach(([nome,,,,,,,,padrao])=>{
+    const input=$('field-'+nome);input.value=padrao??'';input.setCustomValidity('');input.removeAttribute('aria-invalid');
   });
   buscaProprietario?.limpar();
   if(section==='produtos')preencherUnidades();
@@ -280,7 +286,7 @@ async function openForm(record=null, consultar=false) {
   }
 
   if(section==='produtos')preencherUnidades(completo?.unidadeMedida);
-  definitions[section].fields.forEach(([name])=>$('field-'+name).value=completo?.[name] ?? '');
+  definitions[section].fields.forEach(([name,,,,,,,,padrao])=>$('field-'+name).value=completo?.[name] ?? (record ? '' : padrao ?? ''));
   atualizarSugestoesMoto();
 
   if(section==='motocicletas') {
@@ -307,7 +313,7 @@ async function openForm(record=null, consultar=false) {
     }
   }
 
-  definitions[section].fields.forEach(([name])=>$('field-'+name).disabled=consultar || (section==='motocicletas' && name==='clienteId'));
+  definitions[section].fields.forEach(([name])=>$('field-'+name).disabled=consultar || (section==='motocicletas' && name==='clienteId') || (!!record && name==='perfil'));
   $('save-record').disabled=consultar;
   const primeiro=$('form-fields').querySelector('input:not([disabled]), select:not([disabled])');
   (primeiro||$('close-dialog')).focus();
@@ -341,7 +347,8 @@ function renderRows() {
   const normalizar=valor=>String(valor??'').toLocaleLowerCase('pt-BR');
   const filtered=records.filter(record => {
     const pesquisaGeral=!term || (def.searchKeys||def.columns.map(([key])=>key)).some(key => normalizar(record[key]).includes(term));
-    const pesquisaColunas=def.columns.every(([key])=>!filtrosColuna[key] || normalizar(record[key]).includes(filtrosColuna[key]));
+    const textoColuna=(key,format)=>format==='ativo'?(record[key]?'ativo':'inativo'):format==='perfil'?(record[key]==='ADMINISTRADOR'?'administrador':'funcionário'):record[key];
+    const pesquisaColunas=def.columns.every(([key,,format])=>!filtrosColuna[key] || normalizar(textoColuna(key,format)).includes(filtrosColuna[key]));
     const pesquisaEstoque=section!=='produtos'||!filtroEstoque||(filtroEstoque==='available'&&Number(record.saldo)>0)||(filtroEstoque==='reserved'&&Number(record.empenho)>0)||(filtroEstoque==='empty'&&Number(record.saldo)<=0);
     return pesquisaGeral && pesquisaColunas && pesquisaEstoque;
   });
@@ -356,7 +363,7 @@ function renderRows() {
     def.columns.forEach(([key,label,format])=> {
       const td=document.createElement('td');
       const value=record[key];
-      td.textContent=format==='money'?(value==null?'—':money.format(value)):(['estoque','empenho','saldo'].includes(key)?new Intl.NumberFormat('pt-BR',{maximumFractionDigits:3}).format(value??0):(value??'—'));
+      td.textContent=format==='ativo'?(value?'Ativo':'Inativo'):format==='perfil'?(value==='ADMINISTRADOR'?'Administrador':'Funcionário'):format==='money'?(value==null?'—':money.format(value)):(['estoque','empenho','saldo'].includes(key)?new Intl.NumberFormat('pt-BR',{maximumFractionDigits:3}).format(value??0):(value??'—'));
       tr.append(td);
     }
     );
@@ -439,8 +446,9 @@ async function saveRecord(event) {
   const data= {
   }
   ;
-  definitions[section].fields.forEach(([name,label,type])=> {
+  definitions[section].fields.forEach(([name,label,type,,,,,opcoes])=> {
     const value=$('field-'+name).value.trim();
+    if(opcoes){data[name]=name==='ativo'?value==='true':value;return;}
     data[name]=name==='clienteId'&&buscaProprietario?buscaProprietario.valor():name==='unidadeMedida'?value:['number','select'].includes(type)?(value===''?null:Number(value)):value;
   }
   );

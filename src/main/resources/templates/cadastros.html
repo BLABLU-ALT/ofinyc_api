@@ -28,7 +28,7 @@
     <a th:href="@{/motocicletas}" th:classappend="${secao == 'motocicletas'} ? 'active'" th:attr="aria-current=${secao == 'motocicletas' ? 'page' : null}"><span class="nav-icon">◇</span>Motocicletas</a>
     <a th:href="@{/produtos}" th:classappend="${secao == 'produtos'} ? 'active'" th:attr="aria-current=${secao == 'produtos' ? 'page' : null}"><span class="nav-icon">▧</span>Produtos</a>
     <a th:href="@{/servicos}" th:classappend="${secao == 'servicos'} ? 'active'" th:attr="aria-current=${secao == 'servicos' ? 'page' : null}"><span class="nav-icon">⚒</span>Serviços</a>
-    <a th:href="@{/funcionarios}" th:classappend="${secao == 'funcionarios'} ? 'active'">Funcionários</a>
+    <a th:if="${#authorization.expression('hasRole(''ADMINISTRADOR'')')}" th:href="@{/funcionarios}" th:classappend="${secao == 'funcionarios'} ? 'active'">Funcionários</a>
     <a th:href="@{/estoque}" th:classappend="${secao == 'estoque'} ? 'active'">Estoque</a>
   </nav>
   <div class="sidebar-bottom"><span class="status-dot"></span> Seu espaço de trabalho<small>OFICYNIC · Versão de estudo</small></div>

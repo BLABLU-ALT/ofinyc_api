@@ -8,12 +8,14 @@
   function botao(texto,acao){const b=document.createElement('button');b.type='button';b.className='button';b.textContent=texto;b.addEventListener('click',acao);return b;}
   function erro(e){notice(e.mensagem||'Confira os dados e tente novamente.',true);$('notice').scrollIntoView({block:'nearest'});}
   function campo(nome,label,tipo,valor,obrigatorio=true,tamanho=255){const div=document.createElement('div');div.className='form-field'+(tipo==='textarea'?' wide':'');const l=document.createElement('label');l.htmlFor=nome;l.textContent=label+(obrigatorio?' *':'');const input=document.createElement(tipo==='textarea'?'textarea':'input');input.id=nome;input.required=obrigatorio;input.value=valor??'';if(tipo!=='textarea')input.type=tipo;else{input.maxLength=tamanho;input.rows=3;}div.append(l,input);$('os-header-fields').append(div);return input;}
-  async function catalogos(){[clientes,motos,funcionarios,servicos,produtos]=await Promise.all([api('/api/clientes'),api('/api/motocicletas'),api('/api/funcionarios'),api('/api/servicos'),api('/api/produtos')]);}
+  async function catalogos(){[clientes,motos,funcionarios,servicos,produtos]=await Promise.all([api('/api/clientes'),api('/api/motocicletas'),api('/api/funcionarios/ativos'),api('/api/servicos'),api('/api/produtos')]);}
   function cabecalho(){
     $('os-header-fields').replaceChildren();
     const finalizada=somenteConsulta();
     cliente=criarBusca({nome:'header-cliente',rotulo:'Cliente',registros:()=>clientes,descricao:c=>c.nome,chaves:c=>[c.id,c.nome],aoSelecionar:()=>moto?.limpar()});
     moto=criarBusca({nome:'header-moto',rotulo:'Motocicleta',registros:()=>motos.filter(m=>String(m.clienteId)===String(cliente.valor())),descricao:m=>(m.placa||m.chassi)+' · '+m.marca+' '+m.modelo,chaves:m=>[m.id,m.placa,m.chassi,m.marca+' '+m.modelo]});
+    // Preserva a identificação do responsável inativo nesta OS, sem oferecê-lo para outras.
+    if(ordem.funcionarioId&&!funcionarios.some(f=>String(f.id)===String(ordem.funcionarioId)))funcionarios.push({id:ordem.funcionarioId,nome:ordem.funcionarioNome+' (inativo)'});
     funcionario=criarBusca({nome:'header-funcionario',rotulo:'Funcionário responsável',registros:()=>funcionarios,descricao:f=>f.nome,chaves:f=>[f.id,f.nome]});
     cliente.selecionarId(ordem.clienteId);moto.selecionarId(ordem.motocicletaId);funcionario.selecionarId(ordem.funcionarioId);
     // Exibe o vínculo antigo mesmo quando a moto ainda não tem proprietário cadastrado.

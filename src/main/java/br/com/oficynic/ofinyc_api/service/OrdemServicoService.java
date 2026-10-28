@@ -20,12 +20,12 @@ public class OrdemServicoService {
     private final MotocicletaRepository motocicletas;
     private final ServicoRepository servicos;
     private final ProdutoRepository produtos;
-    private final FuncionarioRepository funcionarios;
+    private final UsuarioRepository funcionarios;
     private final EstoqueService estoque;
 
     public OrdemServicoService(OrdemServicoRepository repository, ClienteRepository clientes,
                               MotocicletaRepository motocicletas, ServicoRepository servicos,
-                              ProdutoRepository produtos, FuncionarioRepository funcionarios, EstoqueService estoque) {
+                              ProdutoRepository produtos, UsuarioRepository funcionarios, EstoqueService estoque) {
         this.repository = repository;
         this.clientes = clientes;
         this.motocicletas = motocicletas;
@@ -68,7 +68,7 @@ public class OrdemServicoService {
         ordem.setDataAbertura(ordem.getDataCriacao());
         ordem.setCliente(cliente);
         ordem.setMotocicleta(moto);
-        ordem.setFuncionario(buscarFuncionario(funcionarioId));
+        ordem.setFuncionario(buscarFuncionarioAtivo(funcionarioId));
         return repository.saveAndFlush(ordem);
     }
 
@@ -113,7 +113,8 @@ public class OrdemServicoService {
         }
         ordem.setCliente(cliente);
         ordem.setMotocicleta(moto);
-        ordem.setFuncionario(buscarFuncionario(funcionarioId));
+        boolean mesmoResponsavel = ordem.getFuncionario() != null && ordem.getFuncionario().getId().equals(funcionarioId);
+        if (!mesmoResponsavel) ordem.setFuncionario(buscarFuncionarioAtivo(funcionarioId));
         ordem.setDescricao(orientacao);
         ordem.setParecerTecnico(parecerTecnico == null || parecerTecnico.isBlank() ? null : parecerTecnico.trim());
         // Datas são definidas pelo servidor e pelo evento de aprovação.
@@ -290,7 +291,8 @@ public class OrdemServicoService {
         retrabalho.setDataAbertura(retrabalho.getDataCriacao());
         retrabalho.setCliente(origem.getCliente());
         retrabalho.setMotocicleta(origem.getMotocicleta());
-        retrabalho.setFuncionario(origem.getFuncionario());
+        // Funcionário inativo não recebe nova atribuição; o retrabalho pede outro responsável.
+        if (origem.getFuncionario() != null && origem.getFuncionario().isAtivo()) retrabalho.setFuncionario(origem.getFuncionario());
         retrabalho.setSituacao(SituacaoOrdemServico.RETRABALHO);
         retrabalho.setOrdemOrigem(origem);
         return repository.saveAndFlush(retrabalho);
@@ -318,9 +320,11 @@ public class OrdemServicoService {
         return clientes.findById(id).orElseThrow(() -> erro(HttpStatus.NOT_FOUND, "Cliente não encontrado."));
     }
 
-    private Funcionario buscarFuncionario(Long id) {
+    private Usuario buscarFuncionarioAtivo(Long id) {
         if (id == null) throw erro(HttpStatus.BAD_REQUEST, "Selecione o funcionário responsável.");
-        return funcionarios.findById(id).orElseThrow(() -> erro(HttpStatus.NOT_FOUND, "Funcionário não encontrado."));
+        var funcionario = funcionarios.findById(id).orElseThrow(() -> erro(HttpStatus.NOT_FOUND, "Funcionário não encontrado."));
+        if (!funcionario.isAtivo()) throw erro(HttpStatus.CONFLICT, "Funcionário inativo não pode receber novas ordens de serviço.");
+        return funcionario;
     }
 
     private void conferirVinculos(OrdemServico ordem) {

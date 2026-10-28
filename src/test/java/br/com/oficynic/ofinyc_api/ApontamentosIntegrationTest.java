@@ -50,7 +50,7 @@ class ApontamentosIntegrationTest {
         for (long s : servicos) jdbc.update("DELETE FROM servicos WHERE id=?", s);
         jdbc.update("DELETE FROM motocicletas WHERE id=?", moto);
         jdbc.update("DELETE FROM clientes WHERE id=?", cliente);
-        jdbc.update("DELETE FROM funcionarios WHERE id=?", funcionario);
+        jdbc.update("DELETE FROM usuarios WHERE id=?", funcionario);
     }
 
     private String enviar(MockHttpServletRequestBuilder requisicao, String corpo, int esperado) throws Exception {
@@ -69,9 +69,14 @@ class ApontamentosIntegrationTest {
         ordens.add(os);
         return os;
     }
-    private String cabecalho(String orientacao, String parecer) {
+    private String cabecalho(String orientacao, String parecer) { return cabecalho(orientacao, parecer, funcionario); }
+    private String cabecalho(String orientacao, String parecer, long responsavel) {
         return "{\"descricao\":\"" + orientacao + "\",\"parecerTecnico\":\"" + parecer + "\",\"clienteId\":" + cliente
-                + ",\"motocicletaId\":" + moto + ",\"funcionarioId\":" + funcionario + "}";
+                + ",\"motocicletaId\":" + moto + ",\"funcionarioId\":" + responsavel + "}";
+    }
+    private List<Long> ids(String json) {
+        List<Number> lista = JsonPath.read(json, "$[*].id");
+        return lista.stream().map(Number::longValue).toList();
     }
     private long produto(String precoVenda, String precoCusto) throws Exception {
         long p = id(enviar(post("/api/produtos"), "{\"codigo\":\"APT" + UUID.randomUUID().toString().substring(0, 8)
@@ -147,6 +152,50 @@ class ApontamentosIntegrationTest {
         // O administrador pode conceder um valor menor.
         json = enviar(post("/api/ordens-servico/" + os + "/produtos"), "{\"produtoId\":" + p + ",\"quantidade\":1,\"valorUnitario\":100}", 201);
         assertEquals(100.0, numero(json, "$.produtos[1].valorUnitario"));
+    }
+
+    // REQ-12/13
+    @Test void inativoSaiDaSelecaoMasPermaneceNasOsAntigas() throws Exception {
+        long os = abrirOs("Revisão de rotina");
+        long afastado = id(enviar(post("/api/funcionarios"), "{\"nome\":\"Mecânico afastado\",\"ativo\":false}", 201));
+        try {
+            String ativos = mvc.perform(funcionario(get("/api/funcionarios/ativos"))).andExpect(status().isOk()).andReturn().getResponse().getContentAsString();
+            assertTrue(ids(ativos).contains(funcionario));
+            assertFalse(ids(ativos).contains(afastado));
+            enviar(post("/api/ordens-servico/abertura"), "{\"descricao\":\"Nova\",\"clienteId\":" + cliente + ",\"motocicletaId\":" + moto
+                    + ",\"funcionarioId\":" + afastado + "}", 409);
+
+            // Inativar o responsável não apaga nem troca o vínculo da OS antiga.
+            enviar(put("/api/funcionarios/" + funcionario), "{\"nome\":\"Responsável apontamentos\",\"ativo\":false}", 200);
+            mvc.perform(get("/api/ordens-servico/consulta/" + os)).andExpect(jsonPath("$.funcionarioNome").value("Responsável apontamentos"));
+            enviar(funcionario(put("/api/ordens-servico/" + os)), cabecalho("Revisão de rotina", "Mantém o responsável"), 200);
+            enviar(put("/api/ordens-servico/" + os), cabecalho("Revisão de rotina", "", afastado), 409);
+            assertEquals(funcionario, jdbc.queryForObject("SELECT funcionario_id FROM ordens_servico WHERE id=?", Long.class, os));
+            assertEquals(1, jdbc.queryForObject("SELECT count(*) FROM usuarios WHERE id=?", Integer.class, funcionario));
+        } finally {
+            jdbc.update("DELETE FROM usuarios WHERE id=?", afastado);
+        }
+    }
+
+    // REQ-14
+    @Test void somenteAdministradorGerenciaFuncionarios() throws Exception {
+        mvc.perform(funcionario(get("/api/funcionarios"))).andExpect(status().isForbidden());
+        mvc.perform(funcionario(get("/api/funcionarios/" + funcionario))).andExpect(status().isForbidden());
+        mvc.perform(funcionario(get("/funcionarios"))).andExpect(status().isForbidden());
+        enviar(funcionario(post("/api/funcionarios")), "{\"nome\":\"Intruso\"}", 403);
+        enviar(funcionario(put("/api/funcionarios/" + funcionario)), "{\"nome\":\"Alterado\",\"ativo\":false}", 403);
+        assertTrue(jdbc.queryForObject("SELECT ativo FROM usuarios WHERE id=?", Boolean.class, funcionario));
+        assertEquals("Responsável apontamentos", jdbc.queryForObject("SELECT nome FROM usuarios WHERE id=?", String.class, funcionario));
+
+        String json = enviar(put("/api/funcionarios/" + funcionario),
+                "{\"nome\":\"Responsável apontamentos\",\"login\":\"Resp.Apontamentos\",\"senha\":\"segredo1\",\"ativo\":false}", 200);
+        assertEquals(false, JsonPath.read(json, "$.ativo"));
+        assertEquals("resp.apontamentos", JsonPath.read(json, "$.login"));
+        assertEquals("FUNCIONARIO", JsonPath.read(json, "$.perfil"));
+        assertFalse(json.contains("senha"), "A senha nunca sai na resposta.");
+        assertTrue(jdbc.queryForObject("SELECT senha FROM usuarios WHERE id=?", String.class, funcionario).startsWith("{bcrypt}"));
+        enviar(post("/api/funcionarios"), "{\"nome\":\"Outro\",\"login\":\"resp.apontamentos\",\"senha\":\"segredo2\"}", 409);
+        enviar(post("/api/funcionarios"), "{\"nome\":\"Sem senha\",\"login\":\"sem.senha\"}", 400);
     }
 
     // REQ-10
