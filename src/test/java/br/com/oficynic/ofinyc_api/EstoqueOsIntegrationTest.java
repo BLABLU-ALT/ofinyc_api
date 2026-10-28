@@ -48,7 +48,7 @@ class EstoqueOsIntegrationTest {
         servico = id(postJson("/api/servicos", "{\"nome\":\"Revisão\",\"preco\":10}", 201));
     }
     @AfterEach void limpar() {
-        for (long os : ordens) {
+        for (int indice=ordens.size()-1; indice>=0; indice--) { long os=ordens.get(indice);
             jdbc.update("DELETE FROM movimentacoes_estoque WHERE ordem_servico_id=?", os);
             jdbc.update("DELETE FROM itens_produto_os WHERE ordem_servico_id=?", os);
             jdbc.update("DELETE FROM itens_servico_os WHERE ordem_servico_id=?", os);
@@ -85,7 +85,7 @@ class EstoqueOsIntegrationTest {
     }
     private BigDecimal numero(String sql, long id) { return jdbc.queryForObject(sql, BigDecimal.class, id); }
     private void saldos(long p, String fisico, String empenho) throws Exception {
-        var e = numero("SELECT COALESCE(SUM(i.quantidade),0) FROM itens_produto_os i JOIN ordens_servico o ON o.id=i.ordem_servico_id WHERE i.produto_id=? AND o.situacao <> 'FINALIZADA'", p);
+        var e = numero("SELECT COALESCE(SUM(i.quantidade),0) FROM itens_produto_os i JOIN ordens_servico o ON o.id=i.ordem_servico_id WHERE i.produto_id=? AND o.situacao IN ('ORCAMENTO','EM_ANDAMENTO','RETRABALHO')", p);
         var f = numero("SELECT estoque FROM produtos WHERE id=?", p);
         assertEquals(0, f.compareTo(new BigDecimal(fisico))); assertEquals(0, e.compareTo(new BigDecimal(empenho)));
         assertTrue(f.subtract(e).signum() >= 0);
@@ -215,6 +215,18 @@ class EstoqueOsIntegrationTest {
         iniciar(os);postJson("/api/ordens-servico/"+os+"/finalizacao","",200);saldos(p,"1","0");
         assertEquals(2,jdbc.queryForObject("SELECT count(*) FROM movimentacoes_estoque WHERE ordem_servico_id=?",Integer.class,os));
         assertEquals(0,numero("SELECT SUM(quantidade) FROM movimentacoes_estoque WHERE ordem_servico_id=?",os).compareTo(new BigDecimal("4")));
+    }
+    @Test void cancelarLiberaEmpenhoSemMovimentarEstoque() throws Exception {
+        long p=produto("2","UN"),os=ordem();movimento(p,"ENTRADA","5",201);long i=item(reservar(os,p,"3",201));
+        saldos(p,"5","3");
+        postJson("/api/ordens-servico/"+os+"/cancelamento","",200);
+        saldos(p,"5","0");
+        assertEquals("CANCELADA",jdbc.queryForObject("SELECT situacao FROM ordens_servico WHERE id=?",String.class,os));
+        assertEquals(1,jdbc.queryForObject("SELECT count(*) FROM itens_produto_os WHERE id=?",Integer.class,i));
+        assertEquals(1,jdbc.queryForObject("SELECT count(*) FROM movimentacoes_estoque WHERE produto_id=?",Integer.class,p));
+        postJson("/api/ordens-servico/"+os+"/cancelamento","",200);reservar(os,p,"1",409);
+        mvc.perform(put("/api/ordens-servico/"+os+"/produtos/"+i).with(csrf()).contentType(MediaType.APPLICATION_JSON).content("{\"quantidade\":1}")).andExpect(status().isConflict());
+        saldos(p,"5","0");
     }
     @Test void produtoPreCarregadoEAtualizadoAposEsperaDeLock() throws Exception {
         long p=produto("1","UN");movimento(p,"ENTRADA","5",201);

@@ -36,7 +36,7 @@ public class OrdemServicoController {
     public record Edicao(
             @NotBlank(message = "Informe a descrição.") @Size(max = 255) String descricao,
             @NotNull @Positive Long clienteId, @NotNull @Positive Long motocicletaId,
-            @NotNull(message = "Informe a data de abertura.") LocalDate dataAbertura,
+            LocalDate dataAbertura,
             @NotNull(message = "Selecione o funcionário responsável.") @Positive Long funcionarioId) { }
 
     public record InclusaoProduto(@NotNull @Positive Long produtoId,
@@ -61,7 +61,14 @@ public class OrdemServicoController {
             Long clienteId, String clienteNome, Long motocicletaId, String placa, String chassi,
             String marca, String modelo, SituacaoOrdemServico situacao, LocalDate dataFinalizacao,
             List<ItemConsulta> servicos, BigDecimal valorTotal, Long funcionarioId, String funcionarioNome,
-            List<ProdutoConsulta> produtos, BigDecimal totalServicos, BigDecimal totalProdutos) { }
+            List<ProdutoConsulta> produtos, BigDecimal totalServicos, BigDecimal totalProdutos,
+            Long ordemOrigemId, LocalDate dataCriacao, LocalDate dataAprovacao, LocalDate dataAberturaAnterior) { }
+
+    @GetMapping("/data-atual")
+    public LocalDate dataAtual() { return service.dataAtual(); }
+
+    @PostMapping("/{id}/aprovacao")
+    public Consulta aprovar(@PathVariable Long id) { return consulta(service.aprovar(id)); }
 
     @PostMapping("/abertura")
     public ResponseEntity<Consulta> abrir(@Valid @RequestBody Abertura dados) {
@@ -115,6 +122,18 @@ public class OrdemServicoController {
         return consulta(service.finalizarOrdem(id, usuario.getName()));
     }
 
+    @PostMapping("/{id}/cancelamento")
+    public Consulta cancelarOrdem(@PathVariable Long id) {
+        return consulta(service.cancelarOrdem(id));
+    }
+
+    @PostMapping("/{id}/retrabalho")
+    public ResponseEntity<Consulta> criarRetrabalho(@PathVariable Long id) {
+        var nova = service.criarRetrabalho(id);
+        return ResponseEntity.created(URI.create("/api/ordens-servico/consulta/" + nova.getId()))
+                .body(consulta(nova));
+    }
+
     @PostMapping("/{id}/produtos")
     public ResponseEntity<Consulta> adicionarProduto(@PathVariable Long id, @Valid @RequestBody InclusaoProduto dados) {
         return ResponseEntity.status(201).body(consulta(service.adicionarProduto(id, dados.produtoId(), dados.quantidade())));
@@ -146,7 +165,9 @@ public class OrdemServicoController {
                 moto == null ? null : moto.getMarca(), moto == null ? null : moto.getModelo(),
                 ordem.getSituacao(), ordem.getDataFinalizacao(), itens, ordem.calcularValorTotal(),
                 funcionario == null ? null : funcionario.getId(), funcionario == null ? null : funcionario.getNome(),
-                produtos, ordem.calcularTotalServicos(), ordem.calcularTotalProdutos());
+                produtos, ordem.calcularTotalServicos(), ordem.calcularTotalProdutos(),
+                ordem.getOrdemOrigem() == null ? null : ordem.getOrdemOrigem().getId(),
+                ordem.getDataCriacao(), ordem.getDataAprovacao(), ordem.getDataAberturaAnterior());
     }
 
     // Rotas da aula preservadas; suas gravações passam pelas mesmas proteções do service.

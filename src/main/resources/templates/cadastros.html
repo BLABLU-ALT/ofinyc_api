@@ -37,18 +37,28 @@
   <main id="conteudo" tabindex="-1">
     <div id="notice" class="notice" role="status" aria-live="polite" hidden></div>
     <section class="page-heading"><div><p class="eyebrow" id="eyebrow">SUA OFICINA, ORGANIZADA</p><h1 id="page-title">Visão geral</h1><p class="subtitle" id="page-description">Um lugar para cuidar da base do seu atendimento.</p></div><button id="new-record" class="button primary" hidden><span>＋</span><span id="new-label">Novo cadastro</span></button></section>
-    <section id="dashboard" hidden>
-      <div class="welcome"><div><span class="pill">COMECE PELO ESSENCIAL</span><h2>Mais organização.<br>Mais tempo para a oficina.</h2><p>Cadastre seus clientes, organize as motocicletas<br class="desktop-break"> e mantenha seus catálogos à mão.</p><a class="button primary" th:href="@{/clientes}">Acessar clientes <span>→</span></a></div><div class="welcome-art" aria-hidden="true"><div class="ring ring-one"></div><div class="ring ring-two"></div><div class="art-card"><span>OFICYNIC</span><strong>O<span>+</span></strong><small>PRONTO PARA ORGANIZAR</small></div></div></div>
-      <div class="section-heading"><h2>Seus cadastros</h2><span>Selecione uma área para começar</span></div>
-      <div class="module-grid" id="module-grid"></div>
-      <div class="tip"><span class="tip-symbol">i</span><div><strong>Um passo de cada vez</strong><p>Comece pelos clientes e pelas motocicletas. Depois organize os produtos e serviços oferecidos pela oficina.</p></div></div>
+    <section id="dashboard" class="dashboard" hidden aria-label="Painel operacional da oficina">
+      <div class="dashboard-toolbar">
+        <div><strong>Painel operacional</strong><p id="dashboard-period-help">Indicadores pela data de abertura e situação atual da OS.</p></div>
+        <div class="dashboard-toolbar-actions"><label for="dashboard-period">Período</label><select id="dashboard-period"><option value="all">Todo o período</option><option value="month">Mês atual</option><option value="30">Últimos 30 dias</option><option value="year">Ano atual</option></select><a class="button primary" href="/ordens-servico?nova=1">＋ Nova OS</a></div>
+      </div>
+      <div id="dashboard-loading" class="dashboard-loading" role="status">Carregando dados reais da oficina…</div>
+      <div class="metric-grid" aria-label="Indicadores principais">
+        <article class="metric-card"><span class="metric-icon" aria-hidden="true">▤</span><div><span>Total de OS</span><strong id="metric-total">—</strong></div></article>
+        <article class="metric-card status-progress"><span class="metric-icon" aria-hidden="true">▶</span><div><span>Em andamento</span><strong id="metric-progress">—</strong></div></article>
+        <article class="metric-card status-done"><span class="metric-icon" aria-hidden="true">✓</span><div><span>Concluídas</span><strong id="metric-done">—</strong></div></article>
+        <article class="metric-card status-budget"><span class="metric-icon" aria-hidden="true">▦</span><div><span>Em orçamento</span><strong id="metric-budget">—</strong></div></article>
+      </div>
+      <section class="dashboard-panel" aria-labelledby="status-title"><div class="dashboard-section-heading"><div><h2 id="status-title">Situação das ordens de serviço</h2><p id="status-context">Situação atual das OS do período selecionado.</p></div></div><div id="status-chart" class="status-chart"></div></section>
+      <section class="dashboard-panel" aria-labelledby="reports-title"><div class="dashboard-section-heading"><div><h2 id="reports-title">Relatórios</h2><p>Disponibilidade atual dos relatórios solicitados.</p></div></div><div class="reports-grid"><article><span aria-hidden="true">▤</span><div><strong>Ordens de serviço</strong><p>PDF ainda não implementado.</p></div></article><article><span aria-hidden="true">▧</span><div><strong>Estoque</strong><p>PDF ainda não implementado.</p></div></article></div></section>
     </section>
     <section class="list-panel" id="listing" hidden aria-label="Lista de cadastros">
       <div class="list-toolbar"><div class="search-wrap"><span aria-hidden="true">⌕</span><label class="sr-only" for="search">Buscar cadastros</label><input type="search" id="search" placeholder="Buscar cadastros…" autocomplete="off"></div><div class="list-controls"><button type="button" class="button subtle" id="refresh">Atualizar</button></div></div>
+      <div id="list-filters" class="list-filter-bar" hidden></div>
       <div class="table-scroll"><table><thead id="table-head"></thead><tbody id="table-body"></tbody></table></div>
       <div class="empty-state" id="empty-state" hidden><span class="empty-symbol" aria-hidden="true">＋</span><h2 id="empty-title">Seu primeiro cadastro começa aqui</h2><p id="empty-description">Adicione um registro para começar a organizar sua oficina.</p><button class="button primary" id="empty-add" type="button">Criar primeiro cadastro</button></div>
       <div id="loading" class="loading" role="status">Carregando cadastros…</div>
-      <footer class="list-footer"><span id="record-count">Aguardando dados</span><span>OFICYNIC</span></footer>
+      <footer class="list-footer"><span id="record-count">Aguardando dados</span><div id="pagination" class="pagination" hidden><label for="page-size">Por página</label><select id="page-size"><option value="10">10</option><option value="25">25</option><option value="0">Todos</option></select><button id="page-prev" class="row-action" type="button">← Anterior</button><span id="page-status" aria-live="polite"></span><button id="page-next" class="row-action" type="button">Próxima →</button></div><span>OFICYNIC</span></footer>
     </section>
     <section id="os-workspace" th:if="${secao == 'os-detalhe'}" hidden aria-label="Dados e itens da ordem de serviço">
       <div class="os-toolbar"><a class="button" th:href="@{/ordens-servico}">← Lista de OS</a><span id="os-status" class="status-label"></span><button class="button" id="os-reload" type="button">Atualizar</button></div>
@@ -65,6 +75,6 @@
     <noscript><p class="notice error">Ative o JavaScript para consultar e salvar os cadastros.</p></noscript>
   </main>
 </div>
-<dialog id="record-dialog" aria-labelledby="form-title"><form id="record-form" novalidate><div class="dialog-header"><div><p class="eyebrow">CADASTRO</p><h2 id="form-title">Novo cadastro</h2></div><button type="button" class="close-button" id="close-dialog" aria-label="Fechar formulário">×</button></div><div class="dialog-body"><p id="form-description" class="form-description">Preencha os dados abaixo. Os campos com * são obrigatórios.</p><div id="form-error" class="notice error" role="alert" hidden></div><div class="form-grid" id="form-fields"></div></div><div class="dialog-footer"><button type="button" class="button secondary" id="cancel-dialog">Cancelar</button><button type="submit" class="button primary" id="save-record">Salvar cadastro</button></div></form></dialog>
+<dialog id="record-dialog" aria-labelledby="form-title"><form id="record-form" novalidate><div class="dialog-header"><div><p class="eyebrow">CADASTRO</p><h2 id="form-title">Novo cadastro</h2></div><button type="button" class="close-button" id="close-dialog" aria-label="Fechar formulário">×</button></div><div class="dialog-body"><p id="form-description" class="form-description">Preencha os dados abaixo. Os campos com * são obrigatórios.</p><div id="form-error" class="notice error" role="alert" hidden></div><div class="form-grid" id="form-fields"></div></div><div class="dialog-footer"><button type="button" class="button secondary" id="cancel-dialog">Cancelar</button><button type="button" class="button secondary" id="clear-record" hidden>Limpar</button><button type="submit" class="button primary" id="save-record">Salvar cadastro</button></div></form></dialog>
 
 </body></html>

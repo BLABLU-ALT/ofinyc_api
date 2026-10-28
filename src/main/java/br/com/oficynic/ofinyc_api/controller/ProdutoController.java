@@ -52,7 +52,9 @@ public class ProdutoController {
     @Transactional(readOnly = true, isolation = Isolation.REPEATABLE_READ)
     public ConsultaEstoque consultarEstoque(@PathVariable Long id) {
         var produto = buscar(id);
-        var reservas = itens.findByProdutoIdAndOrdemServicoSituacaoNotOrderById(id, SituacaoOrdemServico.FINALIZADA).stream().map(item ->
+        var ativas = List.of(SituacaoOrdemServico.ORCAMENTO, SituacaoOrdemServico.EM_ANDAMENTO,
+                SituacaoOrdemServico.RETRABALHO);
+        var reservas = itens.findByProdutoIdAndOrdemServicoSituacaoInOrderById(id, ativas).stream().map(item ->
                 new Reserva(item.getOrdemServico().getId(), item.getOrdemServico().getCliente() == null ? null : item.getOrdemServico().getCliente().getNome(),
                         item.getOrdemServico().getSituacao(), item.getQuantidade(), item.getUnidadeMedida())).toList();
         return new ConsultaEstoque(produto, reservas);

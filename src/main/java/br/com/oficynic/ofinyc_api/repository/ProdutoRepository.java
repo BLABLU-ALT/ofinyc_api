@@ -15,6 +15,7 @@ public interface ProdutoRepository extends JpaRepository<Produto, Long> {
     @Query("select p from Produto p where p.id = :id")
     Optional<Produto> buscarComBloqueio(@Param("id") Long id);
     @Query(value = "SELECT COALESCE(SUM(i.quantidade),0) FROM itens_produto_os i "
-            + "JOIN ordens_servico o ON o.id=i.ordem_servico_id WHERE i.produto_id=:id AND o.situacao <> 'FINALIZADA'", nativeQuery = true)
+            + "JOIN ordens_servico o ON o.id=i.ordem_servico_id WHERE i.produto_id=:id "
+            + "AND o.situacao IN ('ORCAMENTO','EM_ANDAMENTO','RETRABALHO')", nativeQuery = true)
     java.math.BigDecimal quantidadeEmpenhada(@Param("id") Long id);
 }

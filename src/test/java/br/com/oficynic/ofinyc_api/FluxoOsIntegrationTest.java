@@ -39,7 +39,7 @@ class FluxoOsIntegrationTest {
 
     @AfterEach
     void limparFixtures() {
-        for(long id:ordens) { jdbc.update("DELETE FROM itens_servico_os WHERE ordem_servico_id=?",id); jdbc.update("DELETE FROM ordens_servico WHERE id=?",id); }
+        for(int indice=ordens.size()-1;indice>=0;indice--) { long id=ordens.get(indice); jdbc.update("DELETE FROM itens_servico_os WHERE ordem_servico_id=?",id); jdbc.update("DELETE FROM ordens_servico WHERE id=?",id); }
         for(long id:motos)jdbc.update("DELETE FROM motocicletas WHERE id=?",id);
         for(long id:servicos)jdbc.update("DELETE FROM servicos WHERE id=?",id);
         for(long id:clientes)jdbc.update("DELETE FROM clientes WHERE id=?",id);
@@ -84,7 +84,7 @@ class FluxoOsIntegrationTest {
         assertEquals(new BigDecimal("37.05"),new BigDecimal(JsonPath.read(resposta,"$.valorTotal").toString()));
         jdbc.update("UPDATE servicos SET preco=99.99 WHERE id=?",servico);
         mvc.perform(get("/api/ordens-servico/consulta/"+os)).andExpect(jsonPath("$.servicos[0].valorUnitario").value(12.35))
-                .andExpect(jsonPath("$.dataAbertura").value("2026-10-01"));
+                .andExpect(jsonPath("$.dataAbertura").value(service.dataAtual().toString()));
         incluir(os,servico,"\"quantidade\":3,\"valorUnitario\":0.10",201);
         mvc.perform(get("/api/ordens-servico/consulta/"+os)).andExpect(jsonPath("$.valorTotal").value(37.35));
         mvc.perform(put("/api/ordens-servico/"+os+"/servicos/"+item).with(csrf()).contentType(MediaType.APPLICATION_JSON)
@@ -94,9 +94,9 @@ class FluxoOsIntegrationTest {
         mvc.perform(put("/api/ordens-servico/"+os).with(csrf()).contentType(MediaType.APPLICATION_JSON)
                 .content(dados(clientes.get(0),motos.get(0)).replace("Revisão","Revisão corrigida")))
                 .andExpect(status().isOk()).andExpect(jsonPath("$.descricao").value("Revisão corrigida"));
-        situacao(os,"EM_ANDAMENTO",200); situacao(os,"EM_ANDAMENTO",200); situacao(os,"ABERTA",200); situacao(os,"EM_ANDAMENTO",200);
+        situacao(os,"EM_ANDAMENTO",200); situacao(os,"EM_ANDAMENTO",200); situacao(os,"ORCAMENTO",200); situacao(os,"EM_ANDAMENTO",200);
         postJson("/api/ordens-servico/"+os+"/finalizacao","",200);
-        mvc.perform(get("/api/ordens-servico/consulta/"+os)).andExpect(status().isOk()).andExpect(jsonPath("$.situacao").value("FINALIZADA"))
+        mvc.perform(get("/api/ordens-servico/consulta/"+os)).andExpect(status().isOk()).andExpect(jsonPath("$.situacao").value("CONCLUIDA"))
                 .andExpect(jsonPath("$.valorTotal").value(19.98)).andExpect(jsonPath("$.dataFinalizacao").value(LocalDate.now().toString()));
         mvc.perform(get("/api/ordens-servico/consulta")).andExpect(status().isOk()).andExpect(jsonPath("$[0].id").value(os));
     }
@@ -106,7 +106,7 @@ class FluxoOsIntegrationTest {
         long os=ordem(), servico=servico();
         postJson("/api/ordens-servico/"+os+"/finalizacao","",409);
         situacao(os,"EM_ANDAMENTO",200); postJson("/api/ordens-servico/"+os+"/finalizacao","",409);
-        situacao(os,"FINALIZADA",409); situacao(os,"INVENTADA",400);
+        situacao(os,"CONCLUIDA",409); situacao(os,"INVENTADA",400);
         String json=incluir(os,servico,"\"quantidade\":1",201);
         long item=((Number)JsonPath.read(json,"$.servicos[0].id")).longValue();
         assertEquals(new BigDecimal("10.10"),jdbc.queryForObject("SELECT valor_unitario FROM itens_servico_os WHERE id=?",BigDecimal.class,item));
@@ -117,7 +117,7 @@ class FluxoOsIntegrationTest {
         mvc.perform(delete("/api/ordens-servico/"+os+"/servicos/"+item).with(csrf())).andExpect(status().isConflict());
         mvc.perform(put("/api/ordens-servico/"+os).with(csrf()).contentType(MediaType.APPLICATION_JSON).content(dados(clientes.get(0),motos.get(0)))).andExpect(status().isConflict());
         mvc.perform(put("/api/ordens-servico/"+os+"/cliente/"+clientes.get(0)).with(csrf())).andExpect(status().isConflict());
-        situacao(os,"FINALIZADA",200); situacao(os,"ABERTA",409); postJson("/api/ordens-servico/"+os+"/finalizacao","",409);
+        situacao(os,"CONCLUIDA",200); situacao(os,"ORCAMENTO",409); postJson("/api/ordens-servico/"+os+"/finalizacao","",409);
         assertEquals(antes,jdbc.queryForMap("SELECT * FROM ordens_servico WHERE id=?",os));
         assertEquals(1,jdbc.queryForObject("SELECT count(*) FROM itens_servico_os WHERE ordem_servico_id=?",Integer.class,os));
     }
@@ -149,9 +149,9 @@ class FluxoOsIntegrationTest {
         mvc.perform(put("/api/motocicletas/"+motos.get(0)).with(csrf()).contentType(MediaType.APPLICATION_JSON)
                 .content("{\"clienteId\":"+outro+",\"placa\":\"TST1A23\",\"marca\":\"M\",\"modelo\":\"M\",\"ano\":2024}")).andExpect(status().isConflict());
         assertEquals(clientes.get(0),jdbc.queryForObject("SELECT cliente_id FROM motocicletas WHERE id=?",Long.class,motos.get(0)));
-        long antiga=id(postJson("/api/ordens-servico","{\"descricao\":\"Legado\",\"dataAbertura\":\"2026-10-01\",\"situacao\":\"FINALIZADA\",\"dataFinalizacao\":\"2026-10-01\"}",201)); ordens.add(antiga);
+        long antiga=id(postJson("/api/ordens-servico","{\"descricao\":\"Legado\",\"dataAbertura\":\"2026-10-01\",\"situacao\":\"CONCLUIDA\",\"dataFinalizacao\":\"2026-10-01\"}",201)); ordens.add(antiga);
         incluir(antiga,servico,"\"quantidade\":1",409);
-        mvc.perform(get("/api/ordens-servico/consulta/"+antiga)).andExpect(status().isOk()).andExpect(jsonPath("$.situacao").value("ABERTA"))
+        mvc.perform(get("/api/ordens-servico/consulta/"+antiga)).andExpect(status().isOk()).andExpect(jsonPath("$.situacao").value("ORCAMENTO"))
                 .andExpect(jsonPath("$.clienteId").isEmpty()).andExpect(jsonPath("$.dataFinalizacao").isEmpty());
     }
 
@@ -166,9 +166,44 @@ class FluxoOsIntegrationTest {
     }
 
     @Test
+    void cancelamentoBloqueiaAlteracoesERetrabalhoPreservaOriginal() throws Exception {
+        long cancelada=ordem(), servico=servico();
+        String cancelamento=postJson("/api/ordens-servico/"+cancelada+"/cancelamento","",200);
+        assertEquals("CANCELADA",JsonPath.read(cancelamento,"$.situacao"));
+        postJson("/api/ordens-servico/"+cancelada+"/cancelamento","",200);
+        incluir(cancelada,servico,"\"quantidade\":1",409);
+        situacao(cancelada,"EM_ANDAMENTO",409);
+        postJson("/api/ordens-servico/"+cancelada+"/retrabalho","",409);
+
+        long concluida=id(postJson("/api/ordens-servico/abertura",dados(clientes.get(0),motos.get(0)),201)); ordens.add(concluida);
+        incluir(concluida,servico,"\"quantidade\":1",201);
+        situacao(concluida,"EM_ANDAMENTO",200);
+        postJson("/api/ordens-servico/"+concluida+"/finalizacao","",200);
+        String resposta=postJson("/api/ordens-servico/"+concluida+"/retrabalho","",201);
+        long retrabalho=id(resposta); ordens.add(retrabalho);
+        assertEquals("RETRABALHO",JsonPath.read(resposta,"$.situacao"));
+        assertEquals(concluida,((Number)JsonPath.read(resposta,"$.ordemOrigemId")).longValue());
+        assertEquals(0,((List<?>)JsonPath.read(resposta,"$.servicos")).size());
+        assertEquals(0,((List<?>)JsonPath.read(resposta,"$.produtos")).size());
+        assertEquals(LocalDate.now().toString(),JsonPath.read(resposta,"$.dataAbertura"));
+        assertEquals("CONCLUIDA",jdbc.queryForObject("SELECT situacao FROM ordens_servico WHERE id=?",String.class,concluida));
+        assertEquals(retrabalho,jdbc.queryForObject("SELECT id FROM ordens_servico WHERE ordem_origem_id=?",Long.class,concluida));
+        incluir(retrabalho,servico,"\"quantidade\":1",201);
+        situacao(retrabalho,"EM_ANDAMENTO",200);
+        postJson("/api/ordens-servico/"+retrabalho+"/finalizacao","",200);
+        mvc.perform(get("/api/ordens-servico/consulta/"+retrabalho)).andExpect(jsonPath("$.situacao").value("CONCLUIDA"));
+        assertEquals(concluida,jdbc.queryForObject("SELECT ordem_origem_id FROM ordens_servico WHERE id=?",Long.class,retrabalho));
+        String outraResposta=postJson("/api/ordens-servico/"+concluida+"/retrabalho","",201);
+        long outroRetrabalho=id(outraResposta);ordens.add(outroRetrabalho);
+        postJson("/api/ordens-servico/"+outroRetrabalho+"/cancelamento","",200);
+        assertEquals(concluida,jdbc.queryForObject("SELECT ordem_origem_id FROM ordens_servico WHERE id=?",Long.class,outroRetrabalho));
+    }
+
+    @Test
     void novasMutacoesExigemLoginECsrf() throws Exception {
         long os=ordem(), servico=servico();
-        for(String rota:new String[]{"/api/ordens-servico/"+os+"/servicos","/api/ordens-servico/"+os+"/finalizacao"}) {
+        for(String rota:new String[]{"/api/ordens-servico/"+os+"/servicos","/api/ordens-servico/"+os+"/finalizacao",
+                "/api/ordens-servico/"+os+"/cancelamento","/api/ordens-servico/"+os+"/retrabalho"}) {
             mvc.perform(post(rota).with(anonymous()).with(csrf()).contentType(MediaType.APPLICATION_JSON).content("{}")).andExpect(status().isUnauthorized());
             mvc.perform(post(rota).contentType(MediaType.APPLICATION_JSON).content("{}")).andExpect(status().isForbidden());
         }
@@ -183,7 +218,7 @@ class FluxoOsIntegrationTest {
         assertThrows(IllegalStateException.class,()->transacao.execute(status->{service.adicionarServico(os,servico,1,new BigDecimal("1.00")); throw new IllegalStateException("Falha simulada antes do commit");}));
         assertEquals(0,jdbc.queryForObject("SELECT count(*) FROM itens_servico_os WHERE ordem_servico_id=?",Integer.class,os));
         for(String sql:new String[]{"UPDATE ordens_servico SET situacao='INVALIDA' WHERE id="+os,
-                "UPDATE ordens_servico SET situacao='FINALIZADA' WHERE id="+os,
+                "UPDATE ordens_servico SET situacao='CONCLUIDA' WHERE id="+os,
                 "UPDATE ordens_servico SET data_finalizacao=CURRENT_DATE WHERE id="+os,
                 "UPDATE motocicletas SET cliente_id=999999999 WHERE id="+motos.get(0),
                 "DELETE FROM clientes WHERE id="+clientes.get(0),
@@ -220,8 +255,71 @@ class FluxoOsIntegrationTest {
             var falha=assertThrows(ExecutionException.class,()->inclusao.get(10,TimeUnit.SECONDS));
             var causa=assertInstanceOf(org.springframework.web.server.ResponseStatusException.class,falha.getCause());
             assertEquals(409,causa.getStatusCode().value());
-            assertEquals("FINALIZADA",jdbc.queryForObject("SELECT situacao FROM ordens_servico WHERE id=?",String.class,os));
+            assertEquals("CONCLUIDA",jdbc.queryForObject("SELECT situacao FROM ordens_servico WHERE id=?",String.class,os));
             assertEquals(1,jdbc.queryForObject("SELECT count(*) FROM itens_servico_os WHERE ordem_servico_id=?",Integer.class,os));
         } finally { liberar.countDown(); executor.shutdownNow(); }
+    }
+
+    @Test
+    void datasServidorAprovacaoUnicaEEdicaoProtegida() throws Exception {
+        long os=ordem();
+        String hoje=service.dataAtual().toString();
+        mvc.perform(get("/api/ordens-servico/consulta/"+os)).andExpect(jsonPath("$.dataCriacao").value(hoje))
+                .andExpect(jsonPath("$.dataAbertura").value(hoje));
+        jdbc.update("UPDATE ordens_servico SET data_criacao='2026-01-02', data_abertura='2026-01-02' WHERE id=?",os);
+        mvc.perform(put("/api/ordens-servico/"+os).with(csrf()).contentType(MediaType.APPLICATION_JSON)
+                .content(dados(clientes.get(0),motos.get(0))))
+                .andExpect(status().isOk()).andExpect(jsonPath("$.dataAbertura").value("2026-01-02"));
+        postJson("/api/ordens-servico/"+os+"/aprovacao","",200);
+        mvc.perform(get("/api/ordens-servico/consulta/"+os)).andExpect(jsonPath("$.dataCriacao").value("2026-01-02"))
+                .andExpect(jsonPath("$.dataAprovacao").value(hoje)).andExpect(jsonPath("$.situacao").value("EM_ANDAMENTO"));
+        jdbc.update("UPDATE ordens_servico SET data_aprovacao='2026-02-03', data_abertura='2026-02-03' WHERE id=?",os);
+        postJson("/api/ordens-servico/"+os+"/aprovacao","",200);
+        situacao(os,"ORCAMENTO",200);situacao(os,"EM_ANDAMENTO",200);
+        mvc.perform(get("/api/ordens-servico/consulta/"+os)).andExpect(jsonPath("$.dataAprovacao").value("2026-02-03"))
+                .andExpect(jsonPath("$.dataAbertura").value("2026-02-03"));
+    }
+
+    @Test
+    void aprovacaoLegadaPreservaDataAnteriorENaoInventaCriacao() throws Exception {
+        long os=ordem();jdbc.update("UPDATE ordens_servico SET data_criacao=NULL, data_abertura='2020-03-04' WHERE id=?",os);
+        postJson("/api/ordens-servico/"+os+"/aprovacao","",200);
+        mvc.perform(get("/api/ordens-servico/consulta/"+os)).andExpect(jsonPath("$.dataCriacao").doesNotExist())
+                .andExpect(jsonPath("$.dataAberturaAnterior").value("2020-03-04"))
+                .andExpect(jsonPath("$.dataAbertura").value(service.dataAtual().toString()));
+        postJson("/api/ordens-servico/"+os+"/cancelamento","",200);
+        postJson("/api/ordens-servico/"+os+"/aprovacao","",409);
+    }
+
+    @Test
+    void aprovacaoExigeCsrfEVinculosSemGravacaoParcial() throws Exception {
+        long os=ordem();mvc.perform(post("/api/ordens-servico/"+os+"/aprovacao")).andExpect(status().isForbidden());
+        jdbc.update("UPDATE ordens_servico SET funcionario_id=NULL WHERE id=?",os);
+        postJson("/api/ordens-servico/"+os+"/aprovacao","",409);
+        assertNull(jdbc.queryForObject("SELECT data_aprovacao FROM ordens_servico WHERE id=?",java.sql.Date.class,os));
+        assertEquals("ORCAMENTO",jdbc.queryForObject("SELECT situacao FROM ordens_servico WHERE id=?",String.class,os));
+    }
+
+    @Test
+    void aprovacaoConcorrenteEReversaoTransacionalPreservamHistorico() throws Exception {
+        long os=ordem();
+        var tx=new TransactionTemplate(transactionManager);
+        assertThrows(IllegalStateException.class,()->tx.execute(status->{service.aprovar(os);throw new IllegalStateException("Falha controlada após flush");}));
+        assertNull(jdbc.queryForObject("SELECT data_aprovacao FROM ordens_servico WHERE id=?",java.sql.Date.class,os));
+        assertEquals("ORCAMENTO",jdbc.queryForObject("SELECT situacao FROM ordens_servico WHERE id=?",String.class,os));
+        var inicio=new CountDownLatch(1);var executor=Executors.newFixedThreadPool(2);
+        try {
+            Callable<Void> acao=()->{inicio.await();service.aprovar(os);return null;};
+            var primeira=executor.submit(acao);var segunda=executor.submit(acao);inicio.countDown();
+            primeira.get(15,TimeUnit.SECONDS);segunda.get(15,TimeUnit.SECONDS);
+            assertEquals(service.dataAtual(),jdbc.queryForObject("SELECT data_aprovacao FROM ordens_servico WHERE id=?",java.sql.Date.class,os).toLocalDate());
+            assertEquals("EM_ANDAMENTO",jdbc.queryForObject("SELECT situacao FROM ordens_servico WHERE id=?",String.class,os));
+        } finally {executor.shutdownNow();}
+    }
+
+    @Test
+    void dataDoServidorRespeitaViradaDoDiaEmSaoPaulo() {
+        assertEquals(LocalDate.of(2026,10,20),OrdemServicoService.dataNoFuso(java.time.Instant.parse("2026-10-21T02:59:59Z")));
+        assertEquals(LocalDate.of(2026,10,21),OrdemServicoService.dataNoFuso(java.time.Instant.parse("2026-10-21T03:00:00Z")));
     }
 }

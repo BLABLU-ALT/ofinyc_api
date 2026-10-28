@@ -42,9 +42,12 @@ public class OrdemServico {
     @Column(nullable = false, length = 255)
     private String descricao;
 
-    @NotNull(message = "Informe a data de abertura.")
     @Column(nullable = false)
     private LocalDate dataAbertura;
+
+    private LocalDate dataCriacao;
+    private LocalDate dataAprovacao;
+    private LocalDate dataAberturaAnterior;
 
     @ManyToOne
     @JoinColumn(name = "cliente_id")
@@ -63,9 +66,14 @@ public class OrdemServico {
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 20)
-    private SituacaoOrdemServico situacao = SituacaoOrdemServico.ABERTA;
+    private SituacaoOrdemServico situacao = SituacaoOrdemServico.ORCAMENTO;
 
     private LocalDate dataFinalizacao;
+
+    @ManyToOne
+    @JoinColumn(name = "ordem_origem_id")
+    @JsonIgnore
+    private OrdemServico ordemOrigem;
 
     @OneToMany(mappedBy = "ordemServico", cascade = CascadeType.PERSIST, orphanRemoval = true)
     @jakarta.persistence.OrderBy("id ASC")

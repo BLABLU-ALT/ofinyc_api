@@ -118,6 +118,9 @@ h2 { margin: 0; font-size: 17px; }
 .list-toolbar { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 10px; background: #f5f6f8; border-bottom: 1px solid #b7c1cc; }
 .search-wrap { width: 340px; max-width: 100%; }
 .search-wrap > span { display: none; }
+.column-filters th { padding: 6px; background: #f5f6f8; }
+.column-filters input, .column-filters select { min-width: 92px; font-size: 13px; }
+.column-filters .button { min-width: 0; width: 100%; }
 .list-controls { display: flex; gap: 8px; }
 input, select { width: 100%; min-height: 32px; padding: 6px 8px; border: 1px solid #9facb9; background: white; color: #253443; }
 input::placeholder { color: #627180; }
@@ -221,6 +224,10 @@ textarea { width: 100%; padding: 8px; border: 1px solid #9facb9; font: inherit; 
 .os-detalhe { min-width: 0; }
 .os-detalhe.wide { grid-column: 1 / -1; }
 .os-detalhe p { margin: 5px 0 0; white-space: pre-wrap; overflow-wrap: anywhere; }
+.os-workspace.somente-consulta .os-panel { background: #eef1f4; }
+.os-workspace.somente-consulta input:disabled,
+.os-workspace.somente-consulta select:disabled,
+.os-workspace.somente-consulta textarea:disabled { background: #dfe4e9; color: #4b5865; opacity: 1; }
 .form-field [aria-invalid=true] { border-color: #b44343; }
 .wide { grid-column: 1 / -1; }
 .os-item, .os-adicionar { padding: 12px; border: 1px solid #ccd5de; margin-top: 10px; }
@@ -235,6 +242,11 @@ textarea:focus-visible { outline: 2px solid #176db0; outline-offset: 2px; }
 .lookup-button { position: absolute; right: 1px; top: 1px; bottom: 1px; width: 36px; border: 0; border-left: 1px solid #9facb9; background: #e8edf2; font-size: 24px; }
 .lookup-dialog { width: 680px; }
 .lookup-dialog .table-scroll { margin-top: 12px; max-height: 40dvh; }
+.quick-client-open { align-self: end; justify-self: start; }
+.refresh-motorcycles { align-self: end; justify-self: start; }
+.quick-client-panel { grid-column: 1 / -1; padding: 12px; border: 1px solid #9facb9; background: #f5f7f9; }
+.quick-client-grid { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 10px; margin-top: 10px; }
+.quick-actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 10px; }
 .os-panel { background: white; border: 1px solid #b7c1cc; padding: 16px; margin: 14px 0; min-width: 0; }
 .os-panel h2 { margin-bottom: 14px; }
 .os-toolbar { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin: 12px 0; }
@@ -250,4 +262,87 @@ textarea:focus-visible { outline: 2px solid #176db0; outline-offset: 2px; }
 .stock-os-link { text-decoration: underline; color: #124e7c; }
 .row-actions { gap: 5px; flex-wrap: wrap; }
 @media (max-width: 1050px) { .os-header-grid, .os-add-grid { grid-template-columns: repeat(2,minmax(0,1fr)); } }
-@media (max-width: 600px) { .os-header-grid, .os-add-grid, .os-totals { grid-template-columns: 1fr; } .os-panel { padding: 10px; } }
+@media (max-width: 600px) { .os-header-grid, .os-add-grid, .os-totals, .quick-client-grid { grid-template-columns: 1fr; } .os-panel { padding: 10px; } }
+
+/* Filtros e paginação das listagens. */
+.search-wrap { position: relative; }
+.search-wrap > span { display: block; position: absolute; left: 10px; top: 50%; transform: translateY(-50%); color: #536475; font-size: 20px; pointer-events: none; }
+.search-wrap input { padding-left: 35px; }
+.list-filter-bar { display: flex; align-items: end; gap: 12px; flex-wrap: wrap; padding: 10px; background: #fff; border-bottom: 1px solid #b7c1cc; }
+.list-filter-bar label { display: grid; gap: 4px; min-width: 190px; font-size: 13px; font-weight: bold; color: #42566a; }
+.filter-title { display: inline-flex; align-items: center; gap: 7px; min-height: 32px; margin-right: 4px; color: #254f72; }
+.filter-title svg { width: 18px; height: 18px; fill: currentColor; }
+.pagination { display: flex; align-items: center; justify-content: center; gap: 8px; flex-wrap: wrap; }
+.pagination label { font-size: 13px; }
+.pagination select { width: auto; min-width: 66px; }
+.pagination .row-action { white-space: nowrap; }
+.list-footer { align-items: center; gap: 12px; }
+body[data-secao="produtos"] .list-panel table { min-width: 900px; }
+body[data-secao="servicos"] .list-panel table { min-width: 650px; }
+body[data-secao="funcionarios"] .list-panel table { min-width: 480px; }
+
+/* Painel operacional da Visão geral. */
+.dashboard { display: grid; gap: 16px; }
+.dashboard-toolbar, .dashboard-panel, .metric-card { background: #fff; border: 1px solid #b7c1cc; }
+.dashboard-toolbar { display: flex; justify-content: space-between; align-items: center; gap: 18px; padding: 14px 16px; }
+.dashboard-toolbar p, .dashboard-section-heading p, .reports-grid p { margin: 4px 0 0; color: #536475; font-size: 13px; }
+.dashboard-toolbar-actions { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.dashboard-toolbar-actions label { font-weight: bold; font-size: 13px; }
+.dashboard-toolbar-actions select { width: auto; min-width: 160px; }
+.dashboard-loading { padding: 10px 12px; background: #e7eef5; border-left: 4px solid #254f72; }
+.dashboard-loading.error { background: #f6e5e5; border-color: #9e3434; color: #7d2929; }
+.metric-grid { display: grid; grid-template-columns: repeat(4,minmax(0,1fr)); gap: 12px; }
+.metric-card { display: flex; align-items: center; gap: 12px; min-height: 96px; padding: 16px; border-top: 4px solid #58738c; }
+.metric-card.status-progress { border-top-color: #b56b1e; }
+.metric-card.status-done { border-top-color: #39734e; }
+.metric-card.status-budget { border-top-color: #416e9b; }
+.metric-icon { display: grid; place-items: center; flex: 0 0 42px; height: 42px; background: #e6edf3; color: #254f72; font-size: 21px; font-weight: bold; }
+.metric-card span:not(.metric-icon), .metric-card strong { display: block; }
+.metric-card > div > span { color: #536475; font-size: 13px; }
+.metric-card strong { margin-top: 5px; color: #173c5b; font-size: 29px; line-height: 1; }
+.dashboard-panel { min-width: 0; padding: 16px; }
+.dashboard-section-heading { display: flex; align-items: start; justify-content: space-between; gap: 12px; margin-bottom: 14px; }
+.dashboard-section-heading > a { color: #124e7c; text-decoration: underline; white-space: nowrap; }
+.status-chart { display: grid; gap: 12px; }
+.status-row > div:first-child { display: flex; justify-content: space-between; gap: 12px; margin-bottom: 5px; }
+.status-track { display: block; height: 12px; background: #e4e9ee; overflow: hidden; }
+.status-bar { display: block; height: 100%; min-width: 0; background: #416e9b; }
+.status-bar.status-em-andamento { background: #b56b1e; }
+.status-bar.status-concluida { background: #39734e; }
+.status-bar.status-cancelada { background: #8c5151; }
+.status-bar.status-retrabalho { background: #735786; }
+.reports-grid { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 10px; }
+.reports-grid article { display: flex; gap: 10px; min-height: 76px; padding: 12px; border: 1px solid #ccd5de; background: #f7f8fa; }
+.reports-grid article > span { display: grid; place-items: center; flex: 0 0 34px; height: 34px; background: #e3eaf0; color: #254f72; font-weight: bold; }
+
+@media (max-width: 1100px) {
+  .metric-grid { grid-template-columns: repeat(2,minmax(0,1fr)); }
+}
+@media (max-width: 760px) {
+  .dashboard-toolbar { align-items: stretch; flex-direction: column; }
+  .dashboard-toolbar-actions { align-items: stretch; }
+  .dashboard-toolbar-actions label { align-self: center; }
+  .metric-grid, .reports-grid { grid-template-columns: 1fr; }
+  .list-filter-bar { align-items: stretch; }
+  .list-filter-bar label { min-width: 100%; }
+  .list-filter-bar .button { width: 100%; }
+  .list-footer { flex-direction: column; align-items: stretch; }
+  .pagination { display: grid; grid-template-columns: minmax(0,1fr) minmax(0,1fr); justify-content: stretch; }
+  .pagination label { align-self: center; }
+  .pagination select { width: 100%; }
+  .pagination #page-prev, .pagination #page-next { width: 100%; }
+  .pagination #page-status { grid-column: 1 / -1; grid-row: 3; text-align: center; }
+}
+
+/* Ações dos formulários: alinhamento e quebra em telas pequenas. */
+.dialog-footer { display:flex; justify-content:flex-end; align-items:center; flex-wrap:wrap; gap:8px; }
+.dialog-footer .button, .quick-actions .button { min-height:38px; display:inline-flex; align-items:center; justify-content:center; }
+body[data-secao="ordens-servico"] #form-fields > .quick-client-open,
+body[data-secao="ordens-servico"] #form-fields > .refresh-motorcycles { align-self:end; justify-self:start; margin:0; min-height:38px; }
+@media(max-width:600px) {
+  .dialog-footer .button { flex:1 1 120px; }
+  .quick-actions { flex-wrap:wrap; }
+  .quick-actions .button { flex:1 1 120px; }
+  body[data-secao="ordens-servico"] #form-fields > .quick-client-open,
+  body[data-secao="ordens-servico"] #form-fields > .refresh-motorcycles { width:100%; }
+}

@@ -20,9 +20,14 @@ public class ClienteController {
         this.repository = repository;
     }
 
+    public record ResumoCliente(Long id, String nome, String cpf, String telefone, String email) { }
+
     @GetMapping
-    public List<Cliente> listar() {
-        return repository.findAll(Sort.by(Sort.Direction.DESC, "id"));
+    public List<ResumoCliente> listar() {
+        return repository.findAll(Sort.by(Sort.Direction.DESC, "id")).stream()
+                .map(cliente -> new ResumoCliente(cliente.getId(), cliente.getNome(), ocultarCpf(cliente.getCpf()),
+                        ocultarTelefone(cliente.getTelefone()), cliente.getEmail()))
+                .toList();
     }
 
     @GetMapping("/{id}")
@@ -57,5 +62,17 @@ public class ClienteController {
                 : repository.existsByCpfAndIdNot(dados.getCpf(), id)) {
             throw new ResponseStatusException(HttpStatus.CONFLICT, "Já existe um cadastro com este cpf.");
         }
+    }
+
+    private String ocultarCpf(String cpf) {
+        if (cpf == null || cpf.length() != 11) return "Não informado";
+        return "***.***." + cpf.substring(6, 9) + "-" + cpf.substring(9);
+    }
+
+    private String ocultarTelefone(String telefone) {
+        if (telefone == null || telefone.isBlank()) return "Não informado";
+        String numeros = telefone.replaceAll("[^0-9]", "");
+        if (numeros.length() <= 4) return "****";
+        return "(**) *****-" + numeros.substring(numeros.length() - 4);
     }
 }

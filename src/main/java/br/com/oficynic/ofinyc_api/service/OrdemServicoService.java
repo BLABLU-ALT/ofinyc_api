@@ -4,6 +4,7 @@ import br.com.oficynic.ofinyc_api.model.*;
 import br.com.oficynic.ofinyc_api.repository.*;
 import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.time.ZoneId;
 import java.util.List;
 import org.springframework.data.domain.Sort;
 import org.springframework.http.HttpStatus;
@@ -34,6 +35,28 @@ public class OrdemServicoService {
         this.estoque = estoque;
     }
 
+    public static LocalDate dataNoFuso(java.time.Instant instante) { return instante.atZone(ZoneId.of("America/Sao_Paulo")).toLocalDate(); }
+
+    public LocalDate dataAtual() { return dataNoFuso(java.time.Instant.now()); }
+
+    public OrdemServico aprovar(Long id) {
+        var ordem = buscarComBloqueio(id);
+        conferirEditavel(ordem);
+        conferirVinculos(ordem);
+        if (ordem.getSituacao() != SituacaoOrdemServico.ORCAMENTO
+                && !(ordem.getSituacao() == SituacaoOrdemServico.EM_ANDAMENTO && ordem.getDataAprovacao() != null))
+            throw erro(HttpStatus.CONFLICT, "A aprovação exige uma OS em orçamento.");
+        if (ordem.getDataAprovacao() == null) {
+            if (ordem.getDataCriacao() == null) ordem.setDataAberturaAnterior(ordem.getDataAbertura());
+            var hoje = dataAtual();
+            ordem.setDataAprovacao(hoje);
+            ordem.setDataAbertura(hoje);
+        }
+        ordem.setSituacao(SituacaoOrdemServico.EM_ANDAMENTO);
+        repository.flush();
+        return ordem;
+    }
+
     public OrdemServico abrir(String descricao, LocalDate data, Long clienteId, Long motocicletaId, Long funcionarioId) {
         var cliente = buscarCliente(clienteId);
         var moto = motocicletas.findById(motocicletaId).orElseThrow(() ->
@@ -41,7 +64,8 @@ public class OrdemServicoService {
         conferirProprietario(cliente, moto);
         var ordem = new OrdemServico();
         ordem.setDescricao(descricao.trim());
-        ordem.setDataAbertura(data == null ? LocalDate.now() : data);
+        ordem.setDataCriacao(dataAtual());
+        ordem.setDataAbertura(ordem.getDataCriacao());
         ordem.setCliente(cliente);
         ordem.setMotocicleta(moto);
         ordem.setFuncionario(buscarFuncionario(funcionarioId));
@@ -52,7 +76,8 @@ public class OrdemServicoService {
     public OrdemServico cadastrarAntiga(OrdemServico dados) {
         var ordem = new OrdemServico();
         ordem.setDescricao(dados.getDescricao().trim());
-        ordem.setDataAbertura(dados.getDataAbertura());
+        ordem.setDataCriacao(dataAtual());
+        ordem.setDataAbertura(ordem.getDataCriacao());
         return repository.saveAndFlush(ordem);
     }
 
@@ -84,7 +109,7 @@ public class OrdemServicoService {
         ordem.setMotocicleta(moto);
         ordem.setFuncionario(buscarFuncionario(funcionarioId));
         ordem.setDescricao(descricao.trim());
-        ordem.setDataAbertura(data);
+        // Datas são definidas pelo servidor e pelo evento de aprovação.
         repository.flush();
         return ordem;
     }
@@ -169,12 +194,20 @@ public class OrdemServicoService {
 
     public OrdemServico alterarSituacao(Long id, SituacaoOrdemServico situacao) {
         var ordem = buscarComBloqueio(id);
+        if (ordem.getSituacao() == SituacaoOrdemServico.ORCAMENTO && situacao == SituacaoOrdemServico.EM_ANDAMENTO)
+            return aprovar(id);
         // Repetir o status não altera nenhum dado, inclusive a data da finalização.
         if (ordem.getSituacao() == situacao) return ordem;
         conferirEditavel(ordem);
         conferirVinculos(ordem);
-        if (situacao == SituacaoOrdemServico.FINALIZADA) {
-            throw erro(HttpStatus.CONFLICT, "Use a operação Finalizar OS.");
+        boolean permitida = ordem.getSituacao() == SituacaoOrdemServico.ORCAMENTO
+                && situacao == SituacaoOrdemServico.EM_ANDAMENTO
+                || ordem.getSituacao() == SituacaoOrdemServico.EM_ANDAMENTO
+                && situacao == SituacaoOrdemServico.ORCAMENTO
+                || ordem.getSituacao() == SituacaoOrdemServico.RETRABALHO
+                && situacao == SituacaoOrdemServico.EM_ANDAMENTO;
+        if (!permitida) {
+            throw erro(HttpStatus.CONFLICT, "Use a operação própria para concluir, cancelar ou criar um retrabalho.");
         }
         ordem.setSituacao(situacao);
         repository.flush();
@@ -202,10 +235,37 @@ public class OrdemServicoService {
             estoque.registrar(bloqueados.get(item.getProduto().getId()), ordem.getFuncionario(), ordem,
                     TipoMovimentacao.SAIDA, item.getQuantidade(), "Consumo de produto na finalização da OS " + id, usuario);
         }
-        ordem.setSituacao(SituacaoOrdemServico.FINALIZADA);
-        ordem.setDataFinalizacao(LocalDate.now());
+        ordem.setSituacao(SituacaoOrdemServico.CONCLUIDA);
+        ordem.setDataFinalizacao(dataAtual());
         repository.flush();
         return ordem;
+    }
+
+    public OrdemServico cancelarOrdem(Long id) {
+        var ordem = buscarComBloqueio(id);
+        if (ordem.getSituacao() == SituacaoOrdemServico.CANCELADA) return ordem;
+        conferirEditavel(ordem);
+        ordem.setSituacao(SituacaoOrdemServico.CANCELADA);
+        ordem.setDataFinalizacao(null);
+        repository.flush();
+        return ordem;
+    }
+
+    public OrdemServico criarRetrabalho(Long id) {
+        var origem = buscarComBloqueio(id);
+        if (origem.getSituacao() != SituacaoOrdemServico.CONCLUIDA) {
+            throw erro(HttpStatus.CONFLICT, "O retrabalho deve partir de uma OS concluída.");
+        }
+        var retrabalho = new OrdemServico();
+        retrabalho.setDescricao(origem.getDescricao());
+        retrabalho.setDataCriacao(dataAtual());
+        retrabalho.setDataAbertura(retrabalho.getDataCriacao());
+        retrabalho.setCliente(origem.getCliente());
+        retrabalho.setMotocicleta(origem.getMotocicleta());
+        retrabalho.setFuncionario(origem.getFuncionario());
+        retrabalho.setSituacao(SituacaoOrdemServico.RETRABALHO);
+        retrabalho.setOrdemOrigem(origem);
+        return repository.saveAndFlush(retrabalho);
     }
 
     private OrdemServico buscarParaAlterar(Long id) {
@@ -220,8 +280,9 @@ public class OrdemServicoService {
     }
 
     private void conferirEditavel(OrdemServico ordem) {
-        if (ordem.getSituacao() == SituacaoOrdemServico.FINALIZADA) {
-            throw erro(HttpStatus.CONFLICT, "A OS finalizada permanece somente para consulta.");
+        if (ordem.getSituacao() == SituacaoOrdemServico.CONCLUIDA
+                || ordem.getSituacao() == SituacaoOrdemServico.CANCELADA) {
+            throw erro(HttpStatus.CONFLICT, "A OS concluída ou cancelada permanece somente para consulta.");
         }
     }
 

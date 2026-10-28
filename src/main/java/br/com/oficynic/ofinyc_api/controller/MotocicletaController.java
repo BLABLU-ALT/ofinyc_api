@@ -41,7 +41,7 @@ public class MotocicletaController {
     public ResponseEntity<Motocicleta> cadastrar(@Valid @RequestBody Motocicleta dados) {
         dados.setId(null);
         verificarDuplicidade(dados, null);
-        dados.setCliente(buscarCliente(dados.getClienteId()));
+        dados.setCliente(buscarClienteOpcional(dados.getClienteId()));
         Motocicleta salvo = repository.saveAndFlush(dados);
         return ResponseEntity.created(URI.create("/api/motocicletas/" + salvo.getId())).body(salvo);
     }
@@ -52,9 +52,12 @@ public class MotocicletaController {
         Motocicleta existente = repository.buscarComBloqueio(id).orElseThrow(() ->
                 new ResponseStatusException(HttpStatus.NOT_FOUND, "Cadastro não encontrado."));
         verificarDuplicidade(dados, id);
-        Cliente cliente = buscarCliente(dados.getClienteId());
-        if (existente.getCliente() != null && !existente.getCliente().getId().equals(cliente.getId())) {
-            throw new ResponseStatusException(HttpStatus.CONFLICT, "A troca de proprietário não faz parte deste protótipo.");
+        Cliente cliente = buscarClienteOpcional(dados.getClienteId());
+        if (existente.getCliente() != null) {
+            if (cliente != null && !existente.getCliente().getId().equals(cliente.getId())) {
+                throw new ResponseStatusException(HttpStatus.CONFLICT, "A troca de proprietário não faz parte deste protótipo.");
+            }
+            cliente = existente.getCliente();
         }
         existente.setCliente(cliente);
         // Copia somente os campos editáveis do formulário.
@@ -67,10 +70,8 @@ public class MotocicletaController {
         return repository.saveAndFlush(existente);
     }
 
-    private Cliente buscarCliente(Long id) {
-        if (id == null) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Selecione o cliente proprietário.");
-        }
+    private Cliente buscarClienteOpcional(Long id) {
+        if (id == null) return null;
         return clienteRepository.findById(id).orElseThrow(() ->
                 new ResponseStatusException(HttpStatus.NOT_FOUND, "Cliente não encontrado."));
     }
