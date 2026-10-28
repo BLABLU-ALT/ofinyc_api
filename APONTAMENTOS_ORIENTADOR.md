@@ -78,9 +78,9 @@ Legenda: `[ ]` pendente · `[x]` concluído e validado. Nenhum item é marcado s
   - Arquivos: `app.js` (`icone`, `botaoIcone`, `decorarBotao`), `ordens-servico.js`, `os-detalhe.js`, `app.css`.
   - Implementado: ícones SVG próprios (lupa, lápis, lixeira, disquete, impressora, documento, planilha, borracha, seta, +, atualizar, caixa); ações de tabela, voltar e atualizar só com ícone (40×40 px) com `title` e `aria-label`; ações de formulário com ícone + texto.
   - Validação (28/10, navegador): lista, OS, itens e diálogos conferidos em 1366 e 390 px.
-- [ ] REQ-16 — Organização da navegação e aba Relatórios
-  - Implementado: menu em grupos — Visão geral / OPERAÇÃO (Estoque, Ordens de serviço) / CADASTROS (Clientes, Motocicletas, Produtos, Serviços) / ADMINISTRAÇÃO só administrador (Funcionários); todos com ícone e `aria-current`. Validado no navegador com os dois perfis.
-  - Pendente: link "Relatórios" (entra junto com a central, REQ-19).
+- [x] REQ-16 — Organização da navegação e aba Relatórios
+  - Implementado: menu em grupos — Visão geral / OPERAÇÃO (Estoque, Ordens de serviço) / CADASTROS (Clientes, Motocicletas, Produtos, Serviços) / ADMINISTRAÇÃO só administrador (Funcionários, Relatórios); todos com ícone e `aria-current`.
+  - Validação (navegador): administrador vê ADMINISTRAÇÃO; funcionário não vê, e `/relatorios` responde 403.
 - [x] REQ-17 — Visão Geral com totais de clientes e veículos
   - Arquivos: `PainelController` (`GET /api/painel/resumo`, `count()` no banco), `cadastros.html`, `app.js`, `app.css`.
   - Implementado: 8 cards em grade 4×2 (2×4 e 1 coluna em telas menores): clientes, veículos, total de OS, orçamento, em andamento, concluídas, canceladas, retrabalhos; painel de relatórios só para o administrador.
@@ -88,16 +88,34 @@ Legenda: `[ ]` pendente · `[x]` concluído e validado. Nenhum item é marcado s
 
 ## Etapa 7 — PDF da OS
 
-- [ ] REQ-18 — Documento de aprovação
+- [x] REQ-18 — Documento de aprovação
+  - Arquivos: `pom.xml` (OpenPDF 1.4.2), `PdfService.gerarAprovacaoOs`, `OrdemServicoController` (`GET /api/ordens-servico/{id}/pdf`), `os-detalhe.js` (botão "PDF de aprovação").
+  - Conteúdo: nº, situação, datas de criação/abertura/aprovação, responsável, cliente, veículo, orientação do cliente, parecer técnico (se houver), serviços e produtos com qtd., unitário e subtotal, totais, valor total previsto, declaração, assinatura e data. Sem aprovação: "AGUARDANDO APROVAÇÃO DO CLIENTE"; aprovada: data; cancelada: aviso.
+  - Acesso: qualquer usuário autenticado (funcionário ou administrador), separado dos relatórios administrativos. Gerar o PDF não altera a OS.
+  - Validação: `pdfDeAprovacaoTrazOsDadosEDeixaAOsSemAprovar` (texto extraído do PDF; situação continua ORCAMENTO); PDF real da OS 1057 conferido visualmente (corrigida a quebra do valor total em destaque).
 
 ## Etapa 8 — Central de relatórios
 
-- [ ] REQ-19 — Aba Relatórios
-- [ ] REQ-20 — Filtros interativos
-- [ ] REQ-21 — Exportação PDF e Excel
-- [ ] REQ-22 — Relatórios de OS
-- [ ] REQ-23 — Relatório de controle financeiro
-- [ ] REQ-24 — Segurança dos relatórios
+- [x] REQ-19 — Aba Relatórios
+  - Arquivos: `PaginaController` (`/relatorios`), `cadastros.html` (seção `reports-workspace`), `relatorios.js`, `app.css`.
+  - Implementado: página única com seleção "Ordens de serviço" / "Controle financeiro" sem trocar de página; acesso direto pela Visão Geral (`?tipo=`).
+- [x] REQ-20 — Filtros interativos
+  - Implementado: cliente, número da OS, status e período (data de abertura), combináveis; botões Pesquisar e Limpar filtros; data inicial > final rejeitada na tela e no servidor (400).
+  - Validação: `relatorioDeOsCombinaFiltros`; navegador: cliente + "Concluída" → 1 registro.
+- [x] REQ-21 — Exportação PDF e Excel
+  - Arquivos: `pom.xml` (Apache POI 5.3.0), `ExcelService`, `PdfService.gerarTabela`, `RelatorioController` (`/pdf` e `/excel` de cada relatório).
+  - Implementado: resultado na tela + PDF (A4 deitado) + .xlsx (valores numéricos em R$), com o mesmo objeto `Filtro` da consulta e os filtros escritos no cabeçalho.
+  - Validação: `exportacoesRespeitamOsMesmosFiltros` (planilha lida no teste: só a OS filtrada; PDF com "1 registro(s)" e sem a OS excluída); arquivos reais baixados e conferidos.
+- [x] REQ-22 — Relatórios de OS
+  - Colunas: nº OS, cliente, veículo (placa/chassi + marca/modelo), data de abertura, status, total de serviços, total de produtos e valor total.
+- [x] REQ-23 — Relatório de controle financeiro
+  - Arquivos: `RelatorioService.financeiro`.
+  - Implementado com dados existentes: por OS (totais, data de aprovação, custo e margem dos produtos) e resumo — aguardando aprovação, aprovado pelo cliente, concluído (serviço executado), cancelado (fora dos totais), totais de serviços e produtos, custo e margem dos produtos concluídos.
+  - Sem invenção: não há registro de pagamento, então nada é chamado de receita; custo/margem só quando **todos** os produtos concluídos têm `custo_unitario` (itens antigos ficam "Indisponível" com a contagem).
+  - Validação: `financeiroUsaSomenteValoresRegistrados` (80 / 170 / 170 / 30 / custo 70 / margem 50; depois item sem custo → indisponível).
+- [x] REQ-24 — Segurança dos relatórios
+  - Implementado: `/relatorios` e `/api/relatorios/**` com `hasRole("ADMINISTRADOR")` no `SecurityConfig`; link e painel ocultos ao funcionário.
+  - Validação: `relatoriosSaoExclusivosDoAdministrador` (7 URLs: funcionário 403, administrador 200, anônimo 401) e `LoginUsuarioIntegrationTest` com sessão real.
 
 ## Testes executados
 
@@ -108,10 +126,22 @@ Legenda: `[ ]` pendente · `[x]` concluído e validado. Nenhum item é marcado s
 | 28/10 | `iniciar-local.ps1 -Teste` (Etapa 5) | 142 testes, 0 falhas |
 | 28/10 | `iniciar-local.ps1 -Teste` (Etapa 6) | 143 testes, 0 falhas |
 | 28/10 | Aplicação na porta 8086 com o banco de testes; navegador interno | Etapas 1–6 conferidas com administrador e funcionário reais |
+| 28/10 | `iniciar-local.ps1 -Teste` (Etapas 7–8) | 148 testes, 0 falhas |
+| 28/10 | Navegador + PDFs/planilha baixados | Central de relatórios, filtros, exportações e PDF da OS conferidos; dados de demonstração removidos do banco de testes |
 
 Ajustes em testes existentes: passaram a rodar como `ADMINISTRADOR` (catálogo agora é administrativo); contagens de migração +1 a cada nova migração (V10, V11); o teste antigo que proibia login no cadastro de funcionário foi adaptado à decisão de 28/10 (login exige senha, perfil fixo); o teste de reserva deixou de enviar preço injetado, porque o REQ-11 passou a aceitar valor informado.
 
 ## Última atividade e próximo passo
 
-- Última atividade: Etapa 6 concluída (REQ-16 aguarda o link Relatórios); iniciado o `PdfService` (Etapa 7).
-- Próximo passo: Etapa 7 — PDF de aprovação da OS (REQ-18); depois Etapa 8 (REQ-19 a 24).
+- Última atividade: Etapas 7 e 8 concluídas; 24/24 requisitos implementados e validados.
+- Banco de estudo (porta 55433) ainda **não** recebeu as migrações V10 e V11: elas serão aplicadas na próxima execução normal (Run/F5 ou `iniciar-local.ps1`). Recomenda-se um backup (`pg_dump`) antes. A V11 renomeia `funcionarios` para `usuarios` preservando os dados.
+- Limitações conhecidas: usuário desativado com sessão aberta continua logado até sair ou a sessão expirar (30 min); o perfil é fixado no cadastro; os nomes de serviço/produto exibidos em OS antigas vêm do cadastro atual (DP-023, sem decisão).
+
+## Mudanças no banco
+
+| Migração | Alteração |
+|---|---|
+| V10 | `ordens_servico.parecer_tecnico`; `produtos.preco_custo`; `itens_produto_os.custo_unitario` (todas opcionais, com CHECK ≥ 0) |
+| V11 | `funcionarios` → `usuarios` (herança em tabela única) + `tipo`, `login` (único), `senha` (BCrypt), `ativo`; CHECK de tipo e de login/senha juntos |
+
+Dependências novas: OpenPDF 1.4.2 (PDF) e Apache POI `poi-ooxml` 5.3.0 (Excel).

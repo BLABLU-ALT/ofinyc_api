@@ -5,6 +5,9 @@ import br.com.oficynic.ofinyc_api.model.ItemServicoOS;
 import br.com.oficynic.ofinyc_api.model.SituacaoOrdemServico;
 import br.com.oficynic.ofinyc_api.model.ItemProdutoOS;
 import br.com.oficynic.ofinyc_api.service.OrdemServicoService;
+import br.com.oficynic.ofinyc_api.service.PdfService;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.MediaType;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.*;
 import java.math.BigDecimal;
@@ -22,9 +25,11 @@ import org.springframework.web.bind.annotation.*;
 @RequestMapping("/api/ordens-servico")
 public class OrdemServicoController {
     private final OrdemServicoService service;
+    private final PdfService pdfService;
 
-    public OrdemServicoController(OrdemServicoService service) {
+    public OrdemServicoController(OrdemServicoService service, PdfService pdfService) {
         this.service = service;
+        this.pdfService = pdfService;
     }
 
     public record Abertura(
@@ -71,6 +76,15 @@ public class OrdemServicoController {
 
     @GetMapping("/data-atual")
     public LocalDate dataAtual() { return service.dataAtual(); }
+
+    // PDF de aprovação do cliente: disponível a quem trabalha na OS; só lê os dados.
+    @GetMapping("/{id}/pdf")
+    @Transactional(readOnly = true)
+    public ResponseEntity<byte[]> pdfAprovacao(@PathVariable Long id) {
+        byte[] pdf = pdfService.gerarAprovacaoOs(service.buscarPorId(id));
+        return ResponseEntity.ok().contentType(MediaType.APPLICATION_PDF)
+                .header(HttpHeaders.CONTENT_DISPOSITION, "inline; filename=\"os-" + id + "-aprovacao.pdf\"").body(pdf);
+    }
 
     @PostMapping("/{id}/aprovacao")
     public Consulta aprovar(@PathVariable Long id) { return consulta(service.aprovar(id)); }

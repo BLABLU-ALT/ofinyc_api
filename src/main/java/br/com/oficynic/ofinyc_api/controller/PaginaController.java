@@ -26,6 +26,9 @@ public class PaginaController {
     }
     @GetMapping("/funcionarios")
     public String funcionarios(Model model) { return pagina(model, "funcionarios"); }
+    @GetMapping("/relatorios")
+    public String relatorios(Model model) { return pagina(model, "relatorios"); }
+
     @GetMapping("/estoque")
     public String estoque(Model model) { return pagina(model, "estoque"); }
     @GetMapping("/login")

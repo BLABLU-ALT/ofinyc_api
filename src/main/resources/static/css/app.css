@@ -358,3 +358,16 @@ body[data-secao="ordens-servico"] #form-fields > .refresh-motorcycles { align-se
   body[data-secao="ordens-servico"] #form-fields > .refresh-motorcycles { width:100%; }
 }
 #os-items-body td:last-child { white-space: nowrap; }
+/* Central de relatórios (REQ-19 a REQ-21) */
+.report-tabs { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 12px; }
+.report-tabs .button[aria-pressed="true"] { background: #28618d; border-color: #194d75; color: #fff; }
+.report-filter-grid { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 10px; align-items: end; }
+.report-actions { grid-column: 1 / -1; margin: 4px 0 0; }
+.report-summary { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px; margin: 12px 0; }
+.report-summary div { padding: 10px 12px; border: 1px solid #ccd5de; border-top: 3px solid #416e9b; background: #fff; }
+.report-summary span { display: block; color: #536475; font-size: 13px; }
+.report-summary strong { display: block; margin-top: 4px; color: #173c5b; font-size: 18px; }
+#report-body td { white-space: nowrap; }
+#report-body td.numero { text-align: right; }
+@media (max-width: 1050px) { .report-filter-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } .report-summary { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+@media (max-width: 600px) { .report-filter-grid, .report-summary { grid-template-columns: 1fr; } .report-actions .button { flex: 1 1 140px; } }

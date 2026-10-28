@@ -1,7 +1,12 @@
 package br.com.oficynic.ofinyc_api;
 
 import com.jayway.jsonpath.JsonPath;
+import java.io.ByteArrayInputStream;
 import java.math.BigDecimal;
+import java.nio.charset.StandardCharsets;
+import java.time.LocalDate;
+import org.apache.poi.ss.usermodel.Sheet;
+import org.apache.poi.xssf.usermodel.XSSFWorkbook;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
@@ -90,6 +95,30 @@ class ApontamentosIntegrationTest {
         long s = id(enviar(post("/api/servicos"), "{\"nome\":\"Revisão apontamentos\",\"preco\":" + preco + "}", 201));
         servicos.add(s);
         return s;
+    }
+
+    private void concluir(long os, long servico) throws Exception {
+        enviar(post("/api/ordens-servico/" + os + "/servicos"), "{\"servicoId\":" + servico + "}", 201);
+        enviar(post("/api/ordens-servico/" + os + "/aprovacao"), "", 200);
+        enviar(post("/api/ordens-servico/" + os + "/finalizacao"), "", 200);
+    }
+    private byte[] baixar(MockHttpServletRequestBuilder requisicao, String tipo) throws Exception {
+        return mvc.perform(requisicao).andExpect(status().isOk()).andExpect(content().contentTypeCompatibleWith(tipo))
+                .andReturn().getResponse().getContentAsByteArray();
+    }
+    private String textoPdf(byte[] pdf) throws Exception {
+        assertEquals("%PDF", new String(pdf, 0, 4, StandardCharsets.US_ASCII));
+        var leitor = new com.lowagie.text.pdf.PdfReader(pdf);
+        try {
+            var extrator = new com.lowagie.text.pdf.parser.PdfTextExtractor(leitor);
+            StringBuilder texto = new StringBuilder();
+            for (int pagina = 1; pagina <= leitor.getNumberOfPages(); pagina++) texto.append(extrator.getTextFromPage(pagina)).append('\n');
+            return texto.toString();
+        } finally { leitor.close(); }
+    }
+    // Mesma data usada pelo servidor na abertura (fuso America/Sao_Paulo).
+    private String hoje() throws Exception {
+        return mvc.perform(get("/api/ordens-servico/data-atual")).andReturn().getResponse().getContentAsString().replace("\"", "");
     }
 
     // REQ-06/07/08
@@ -204,6 +233,110 @@ class ApontamentosIntegrationTest {
         int motos = jdbc.queryForObject("SELECT count(*) FROM motocicletas", Integer.class);
         mvc.perform(funcionario(get("/api/painel/resumo"))).andExpect(status().isOk())
                 .andExpect(jsonPath("$.clientes").value(clientes)).andExpect(jsonPath("$.motocicletas").value(motos));
+    }
+
+    // REQ-18
+    @Test void pdfDeAprovacaoTrazOsDadosEDeixaAOsSemAprovar() throws Exception {
+        long os = abrirOs("Freio fazendo barulho"), p = produto("120", "70"), s = servico("80");
+        enviar(post("/api/ordens-servico/" + os + "/produtos"), "{\"produtoId\":" + p + ",\"quantidade\":1,\"valorUnitario\":130}", 201);
+        enviar(post("/api/ordens-servico/" + os + "/servicos"), "{\"servicoId\":" + s + "}", 201);
+
+        String texto = textoPdf(baixar(funcionario(get("/api/ordens-servico/" + os + "/pdf")), "application/pdf"));
+        for (String esperado : List.of("Ordem de Serviço nº " + os, "AGUARDANDO APROVAÇÃO DO CLIENTE", "Cliente apontamentos",
+                "APT1A23", "Honda CG", "Freio fazendo barulho", "Revisão apontamentos", "Pastilha", "130,00", "80,00", "210,00", "Assinatura do cliente"))
+            assertTrue(texto.contains(esperado), "PDF sem: " + esperado);
+        assertEquals("ORCAMENTO", jdbc.queryForObject("SELECT situacao FROM ordens_servico WHERE id=?", String.class, os));
+        assertEquals(0, jdbc.queryForObject("SELECT count(*) FROM ordens_servico WHERE id=? AND data_aprovacao IS NOT NULL", Integer.class, os));
+
+        enviar(post("/api/ordens-servico/" + os + "/aprovacao"), "", 200);
+        texto = textoPdf(baixar(get("/api/ordens-servico/" + os + "/pdf"), "application/pdf"));
+        assertTrue(texto.contains("APROVADA PELO CLIENTE EM"));
+    }
+
+    // REQ-19/20/22
+    @Test void relatorioDeOsCombinaFiltros() throws Exception {
+        long aberta = abrirOs("Primeira"), concluida = abrirOs("Segunda"), s = servico("50");
+        concluir(concluida, s);
+        String base = "/api/relatorios/ordens-servico?clienteId=" + cliente;
+        assertEquals(List.of(aberta, concluida), numeros(mvc.perform(get(base)).andReturn().getResponse().getContentAsString()));
+        String json = mvc.perform(get(base + "&situacao=CONCLUIDA&inicio=" + hoje() + "&fim=" + hoje())).andExpect(status().isOk())
+                .andReturn().getResponse().getContentAsString();
+        assertEquals(List.of(concluida), numeros(json));
+        assertEquals(50.0, numero(json, "$[0].valorTotal"));
+        assertEquals("Cliente apontamentos", JsonPath.read(json, "$[0].cliente"));
+        assertEquals("APT1A23 · Honda CG", JsonPath.read(json, "$[0].veiculo"));
+        assertEquals(List.of(aberta), numeros(mvc.perform(get(base + "&numero=" + aberta)).andReturn().getResponse().getContentAsString()));
+        assertEquals(List.of(), numeros(mvc.perform(get(base + "&inicio=" + LocalDate.parse(hoje()).plusDays(1))).andReturn().getResponse().getContentAsString()));
+        mvc.perform(get(base + "&inicio=2026-10-10&fim=2026-10-01")).andExpect(status().isBadRequest());
+    }
+    private List<Long> numeros(String json) {
+        List<Number> lista = JsonPath.read(json, "$[*].numero");
+        return lista.stream().map(Number::longValue).toList();
+    }
+
+    // REQ-21
+    @Test void exportacoesRespeitamOsMesmosFiltros() throws Exception {
+        long aberta = abrirOs("Primeira"), concluida = abrirOs("Segunda"), s = servico("50");
+        concluir(concluida, s);
+        String filtro = "?clienteId=" + cliente + "&situacao=CONCLUIDA";
+        byte[] planilha = baixar(get("/api/relatorios/ordens-servico/excel" + filtro), "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
+        assertEquals("PK", new String(planilha, 0, 2, StandardCharsets.US_ASCII));
+        try (var arquivo = new XSSFWorkbook(new ByteArrayInputStream(planilha))) {
+            Sheet aba = arquivo.getSheetAt(0);
+            assertEquals("Nº OS", aba.getRow(3).getCell(0).getStringCellValue());
+            assertEquals(4, aba.getLastRowNum(), "Somente a OS concluída do cliente.");
+            assertEquals(concluida, (long) aba.getRow(4).getCell(0).getNumericCellValue());
+            assertEquals(50.0, aba.getRow(4).getCell(7).getNumericCellValue());
+        }
+        String texto = textoPdf(baixar(get("/api/relatorios/ordens-servico/pdf" + filtro), "application/pdf"));
+        assertTrue(texto.contains("1 registro(s)"));
+        assertTrue(texto.contains("status Concluída"));
+        assertFalse(texto.contains("Primeira"));
+        textoPdf(baixar(get("/api/relatorios/financeiro/pdf" + filtro), "application/pdf"));
+        baixar(get("/api/relatorios/financeiro/excel" + filtro), "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
+        assertTrue(aberta < concluida);
+    }
+
+    // REQ-23
+    @Test void financeiroUsaSomenteValoresRegistrados() throws Exception {
+        long orcamento = abrirOs("Orçamento"), concluida = abrirOs("Concluída"), cancelada = abrirOs("Cancelada");
+        long s80 = servico("80"), s50 = servico("50"), s30 = servico("30"), comCusto = produto("120", "70");
+        enviar(post("/api/ordens-servico/" + orcamento + "/servicos"), "{\"servicoId\":" + s80 + "}", 201);
+        enviar(post("/api/ordens-servico/" + concluida + "/produtos"), "{\"produtoId\":" + comCusto + ",\"quantidade\":1}", 201);
+        concluir(concluida, s50);
+        enviar(post("/api/ordens-servico/" + cancelada + "/servicos"), "{\"servicoId\":" + s30 + "}", 201);
+        enviar(post("/api/ordens-servico/" + cancelada + "/cancelamento"), "", 200);
+
+        String json = mvc.perform(get("/api/relatorios/financeiro?clienteId=" + cliente)).andExpect(status().isOk()).andReturn().getResponse().getContentAsString();
+        assertEquals(3, (int) JsonPath.read(json, "$.resumo.quantidadeOs"));
+        assertEquals(80.0, numero(json, "$.resumo.valorAguardandoAprovacao"));
+        assertEquals(170.0, numero(json, "$.resumo.valorAprovado"));
+        assertEquals(170.0, numero(json, "$.resumo.valorConcluido"));
+        assertEquals(30.0, numero(json, "$.resumo.valorCancelado"));
+        assertEquals(130.0, numero(json, "$.resumo.totalServicos"));
+        assertEquals(120.0, numero(json, "$.resumo.totalProdutos"));
+        assertEquals(70.0, numero(json, "$.resumo.custoProdutosConcluidos"));
+        assertEquals(50.0, numero(json, "$.resumo.margemProdutosConcluidos"));
+        assertTrue(((String) JsonPath.read(json, "$.resumo.observacao")).contains("não registra pagamentos"));
+
+        // Produto sem preço de custo: o sistema não inventa custo nem margem.
+        long semCusto = produto("40", "null"), outra = abrirOs("Sem custo");
+        enviar(post("/api/ordens-servico/" + outra + "/produtos"), "{\"produtoId\":" + semCusto + ",\"quantidade\":1}", 201);
+        concluir(outra, s50);
+        json = mvc.perform(get("/api/relatorios/financeiro?clienteId=" + cliente)).andReturn().getResponse().getContentAsString();
+        assertNull(JsonPath.read(json, "$.resumo.custoProdutosConcluidos"));
+        assertNull(JsonPath.read(json, "$.resumo.margemProdutosConcluidos"));
+        assertEquals(1, (int) JsonPath.read(json, "$.resumo.itensConcluidosSemCusto"));
+    }
+
+    // REQ-24
+    @Test void relatoriosSaoExclusivosDoAdministrador() throws Exception {
+        for (String url : List.of("/relatorios", "/api/relatorios/ordens-servico", "/api/relatorios/ordens-servico/pdf",
+                "/api/relatorios/ordens-servico/excel", "/api/relatorios/financeiro", "/api/relatorios/financeiro/pdf", "/api/relatorios/financeiro/excel")) {
+            mvc.perform(funcionario(get(url))).andExpect(status().isForbidden());
+            mvc.perform(get(url)).andExpect(status().isOk());
+        }
+        mvc.perform(get("/api/relatorios/financeiro").with(anonymous())).andExpect(status().isUnauthorized());
     }
 
     // REQ-10

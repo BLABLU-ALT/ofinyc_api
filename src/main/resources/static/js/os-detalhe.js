@@ -4,6 +4,9 @@
   let ordem,clientes=[],motos=[],funcionarios=[],servicos=[],produtos=[],referencia,cliente,moto,funcionario,ocupado=false,geracao=0;
   const estados={ORCAMENTO:'Orçamento',EM_ANDAMENTO:'Em andamento',CONCLUIDA:'Concluída',CANCELADA:'Cancelada',RETRABALHO:'Retrabalho'};
   const somenteConsulta=()=>['CONCLUIDA','CANCELADA'].includes(ordem.situacao);
+  // PDF de aprovação: abre em nova aba e não altera a OS.
+  const pdf=document.createElement('a');pdf.className='button';pdf.href='/api/ordens-servico/'+id+'/pdf';pdf.target='_blank';pdf.rel='noopener';
+  pdf.title='Gerar PDF para aprovação do cliente';rotular(pdf,'pdf','PDF de aprovação');$('os-status').after(pdf);
   $('page-title').textContent='Ordem de serviço nº '+id;$('breadcrumb').textContent='OS '+id;document.title='OS '+id+' · OFICYNIC';
   function botao(texto,acao,nomeIcone){const b=document.createElement('button');b.type='button';b.className='button';if(nomeIcone)rotular(b,nomeIcone,texto);else b.textContent=texto;b.addEventListener('click',acao);return b;}
   function erro(e){notice(e.mensagem||'Confira os dados e tente novamente.',true);$('notice').scrollIntoView({block:'nearest'});}

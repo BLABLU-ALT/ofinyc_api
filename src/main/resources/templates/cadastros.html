@@ -14,6 +14,7 @@
   <script th:if="${secao == 'ordens-servico'}" th:src="@{/js/ordens-servico.js}" defer></script>
   <script th:if="${secao == 'os-detalhe'}" th:src="@{/js/os-detalhe.js}" defer></script>
   <script th:if="${secao == 'estoque'}" th:src="@{/js/estoque.js}" defer></script>
+  <script th:if="${secao == 'relatorios'}" th:src="@{/js/relatorios.js}" defer></script>
 </head>
 <body th:attr="data-secao=${secao},data-ordem-id=${ordemId}">
 <a class="skip" href="#conteudo">Pular para o conteúdo</a>
@@ -33,6 +34,7 @@
     <th:block th:if="${admin}">
     <div class="nav-divider"></div><div class="nav-label">ADMINISTRAÇÃO</div>
     <a th:href="@{/funcionarios}" th:classappend="${secao == 'funcionarios'} ? 'active'" th:attr="aria-current=${secao == 'funcionarios' ? 'page' : null}"><span class="nav-icon" aria-hidden="true">◎</span>Funcionários</a>
+    <a th:href="@{/relatorios}" th:classappend="${secao == 'relatorios'} ? 'active'" th:attr="aria-current=${secao == 'relatorios' ? 'page' : null}"><span class="nav-icon" aria-hidden="true">▥</span>Relatórios</a>
     </th:block>
   </nav>
   <div class="sidebar-bottom"><span class="status-dot"></span> Seu espaço de trabalho<small>OFICYNIC · Versão de estudo</small></div>
@@ -79,6 +81,36 @@
     <section id="stock-workspace" th:if="${secao == 'estoque'}" hidden>
       <section class="os-panel"><h2>Registrar movimentação</h2><form id="stock-form" novalidate><div id="stock-fields" class="os-header-grid"></div><div class="os-toolbar"><button id="stock-save" class="button primary" type="submit">Registrar movimentação</button><button id="stock-reload" class="button" type="button">Atualizar histórico</button></div></form></section>
       <section class="os-panel"><h2>Histórico de estoque</h2><div class="table-scroll"><table><thead><tr><th scope="col">Nº</th><th scope="col">Data</th><th scope="col">Produto</th><th scope="col">Tipo</th><th scope="col">Quantidade</th><th scope="col">Unidade</th><th scope="col">Responsável</th><th scope="col">Usuário</th><th scope="col">Motivo</th><th scope="col">OS</th></tr></thead><tbody id="stock-body"></tbody></table></div><p id="stock-empty" hidden>Nenhuma movimentação registrada.</p></section>
+    </section>
+    <section id="reports-workspace" th:if="${secao == 'relatorios'}" hidden aria-label="Central de relatórios">
+      <section class="os-panel" aria-labelledby="report-filter-title">
+        <div class="report-tabs" role="group" aria-label="Tipo de relatório">
+          <button type="button" class="button" data-tipo="ordens" aria-pressed="true">Ordens de serviço</button>
+          <button type="button" class="button" data-tipo="financeiro" aria-pressed="false">Controle financeiro</button>
+        </div>
+        <h2 id="report-filter-title">Filtros</h2>
+        <form id="report-filters" class="report-filter-grid" novalidate>
+          <div class="form-field"><label for="report-cliente">Cliente</label><select id="report-cliente"><option value="">Todos os clientes</option></select></div>
+          <div class="form-field"><label for="report-numero">Número da OS</label><input id="report-numero" type="number" min="1" step="1" placeholder="Todas"></div>
+          <div class="form-field"><label for="report-situacao">Status</label><select id="report-situacao"><option value="">Todos</option><option value="ORCAMENTO">Orçamento</option><option value="EM_ANDAMENTO">Em andamento</option><option value="CONCLUIDA">Concluída</option><option value="CANCELADA">Cancelada</option><option value="RETRABALHO">Retrabalho</option></select></div>
+          <div class="form-field"><label for="report-inicio">Abertura a partir de</label><input id="report-inicio" type="date"></div>
+          <div class="form-field"><label for="report-fim">Abertura até</label><input id="report-fim" type="date"></div>
+          <div class="os-toolbar report-actions">
+            <button id="report-search" class="button primary" type="submit">Pesquisar</button>
+            <button id="report-clear" class="button" type="button">Limpar filtros</button>
+            <button id="report-pdf" class="button" type="button">Exportar PDF</button>
+            <button id="report-excel" class="button" type="button">Exportar Excel</button>
+          </div>
+        </form>
+        <p id="report-info" role="status"></p>
+      </section>
+      <section id="report-summary" class="report-summary" aria-label="Resumo financeiro" hidden></section>
+      <section class="os-panel" aria-labelledby="report-title">
+        <h2 id="report-title">Resultado</h2>
+        <div class="table-scroll"><table><thead id="report-head"></thead><tbody id="report-body"></tbody></table></div>
+        <p id="report-empty" hidden>Nenhum registro encontrado para os filtros informados.</p>
+        <p id="report-note" class="field-help"></p>
+      </section>
     </section>
     <footer class="page-footer">Feito para o dia a dia da sua oficina.<span>Cadastros · OFICYNIC</span></footer>
     <noscript><p class="notice error">Ative o JavaScript para consultar e salvar os cadastros.</p></noscript>
