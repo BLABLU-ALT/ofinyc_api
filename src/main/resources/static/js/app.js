@@ -34,6 +34,44 @@ const definitions = {
 }
 ;
 const $ = id => document.getElementById(id);
+// Ícones de traço desenhados em SVG, sem biblioteca externa (REQ-15).
+const desenhosIcone = {
+  consultar:'<circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16" y2="16"/>',
+  editar:'<path d="M4 20h4L19 9l-4-4L4 16z"/><line x1="13" y1="7" x2="17" y2="11"/>',
+  excluir:'<polyline points="4 7 20 7"/><path d="M6 7l1 13h10l1-13"/><path d="M9 7V4h6v3"/>',
+  salvar:'<path d="M5 3h11l3 3v15H5z"/><rect x="8" y="3" width="7" height="5"/><rect x="8" y="13" width="8" height="6"/>',
+  imprimir:'<rect x="6" y="3" width="12" height="6"/><rect x="4" y="9" width="16" height="8"/><rect x="7" y="14" width="10" height="7"/>',
+  pdf:'<path d="M6 2h9l5 5v15H6z"/><polyline points="15 2 15 7 20 7"/><line x1="9" y1="13" x2="17" y2="13"/><line x1="9" y1="17" x2="15" y2="17"/>',
+  excel:'<rect x="4" y="3" width="16" height="18"/><line x1="4" y1="9" x2="20" y2="9"/><line x1="4" y1="15" x2="20" y2="15"/><line x1="10" y1="3" x2="10" y2="21"/>',
+  limpar:'<path d="M15 4l5 5-9 9H6l-3-3z"/><line x1="11" y1="18" x2="21" y2="18"/><line x1="9" y1="10" x2="14" y2="15"/>',
+  voltar:'<line x1="20" y1="12" x2="5" y2="12"/><polyline points="11 6 5 12 11 18"/>',
+  adicionar:'<line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>',
+  atualizar:'<path d="M20 12a8 8 0 1 1-2.3-5.7"/><polyline points="20 4 20 9 15 9"/>',
+  estoque:'<path d="M3 8l9-5 9 5v8l-9 5-9-5z"/><polyline points="3 8 12 13 21 8"/><line x1="12" y1="13" x2="12" y2="21"/>',
+  aprovar:'<polyline points="5 12 10 17 19 7"/>',
+  cancelar:'<circle cx="12" cy="12" r="9"/><line x1="8" y1="8" x2="16" y2="16"/><line x1="16" y1="8" x2="8" y2="16"/>',
+  fechar:'<line x1="6" y1="6" x2="18" y2="18"/><line x1="18" y1="6" x2="6" y2="18"/>',
+  retrabalho:'<polyline points="4 4 4 9 9 9"/><path d="M4 9a8 8 0 1 1 1.5 7"/>'
+};
+function icone(nome) {
+  const svg=document.createElementNS('http://www.w3.org/2000/svg','svg');
+  svg.setAttribute('viewBox','0 0 24 24');svg.setAttribute('aria-hidden','true');svg.classList.add('icone');
+  svg.innerHTML=desenhosIcone[nome]||'';return svg;
+}
+// Botão somente com ícone: a dica (title) e o aria-label dizem a ação.
+function botaoIcone(nome,rotulo,acao,classe='row-action') {
+  const botao=document.createElement('button');botao.type='button';botao.className=classe+' icon-button';
+  botao.title=rotulo;botao.setAttribute('aria-label',rotulo);botao.append(icone(nome));
+  if(acao)botao.addEventListener('click',acao);return botao;
+}
+// Põe ícone num botão existente; com somenteIcone, o texto vira dica.
+function decorarBotao(elemento,nome,somenteIcone=false) {
+  if(!elemento)return;
+  const rotulo=elemento.textContent.trim();
+  if(somenteIcone){elemento.title=rotulo;elemento.setAttribute('aria-label',rotulo);elemento.replaceChildren(icone(nome));elemento.classList.add('icon-button');}
+  else elemento.replaceChildren(icone(nome),rotulo);
+}
+function rotular(elemento,nome,texto){elemento.replaceChildren(icone(nome),texto);}
 // O perfil só ajusta a tela; as permissões são conferidas no servidor.
 const administrador = document.querySelector('meta[name="perfil"]')?.content === 'ADMINISTRADOR';
 const secoesSoAdministradorAltera = ['produtos','servicos','funcionarios'];
@@ -141,6 +179,8 @@ function buildDashboard() {
     $('metric-progress').textContent=quantidade('EM_ANDAMENTO');
     $('metric-done').textContent=quantidade('CONCLUIDA');
     $('metric-budget').textContent=quantidade('ORCAMENTO');
+    $('metric-canceled').textContent=quantidade('CANCELADA');
+    $('metric-rework').textContent=lista.filter(ordem=>ordem.ordemOrigemId).length;
     const valores=Object.keys(rotulos).map(situacao=>[situacao,quantidade(situacao)]),maior=Math.max(1,...valores.map(([,valor])=>valor));
     $('status-chart').replaceChildren(...valores.map(([situacao,valor])=>{
       const linha=document.createElement('div');linha.className='status-row';
@@ -149,9 +189,12 @@ function buildDashboard() {
     }));
   };
   $('dashboard-period').addEventListener('change',renderizar);
+  // Totais de cadastros vêm de consultas count() no banco.
+  api('/api/painel/resumo').then(resumo=>{$('metric-clients').textContent=resumo.clientes;$('metric-vehicles').textContent=resumo.motocicletas;})
+    .catch(error=>notice(error.mensagem||'Não foi possível carregar os totais de cadastros.',true));
   api('/api/ordens-servico/consulta').then(dados=>{ordensDashboard=dados;$('dashboard-loading').hidden=true;renderizar();}).catch(error=>{
     $('dashboard-loading').textContent=error.mensagem||'Não foi possível carregar o painel.';$('dashboard-loading').classList.add('error');
-    ['metric-total','metric-progress','metric-done','metric-budget'].forEach(id=>$(id).textContent='—');
+    ['metric-total','metric-progress','metric-done','metric-budget','metric-canceled','metric-rework'].forEach(id=>$(id).textContent='—');
     $('status-chart').textContent='Não foi possível carregar as situações das OS.';notice(error.mensagem,true);
   });
 }
@@ -370,24 +413,14 @@ function renderRows() {
     const td=document.createElement('td');
     const actions=document.createElement('div');
     actions.className='row-actions';
-    const consult=document.createElement('button');
-    consult.type='button';
-    consult.className='row-action';
-    consult.textContent='⌕ Consultar';
-    consult.setAttribute('aria-label','Consultar '+(record.nome||record.placa||record.chassi||record.codigo));
-    consult.addEventListener('click',()=>openForm(record,true));
-    const edit=document.createElement('button');
-    edit.type='button';
-    edit.className='row-action';
-    edit.textContent='✎ Editar';
-    edit.setAttribute('aria-label','Editar '+(record.nome||record.placa||record.chassi||record.codigo));
-    edit.addEventListener('click',()=>openForm(record,false));
+    const nomeRegistro=record.nome||record.placa||record.chassi||record.codigo;
+    const consult=botaoIcone('consultar','Consultar '+nomeRegistro,()=>openForm(record,true));
+    const edit=botaoIcone('editar','Editar '+nomeRegistro,()=>openForm(record,false));
     actions.append(consult);
     if(administrador || !secoesSoAdministradorAltera.includes(section)) actions.append(edit);
     if(section==='produtos') {
-      const estoque=document.createElement('button'); estoque.type='button'; estoque.className='row-action'; estoque.textContent='⌕ Estoque';
-      estoque.setAttribute('aria-label','Consultar estoque do produto '+record.codigo);
-      estoque.addEventListener('click',()=>consultarEstoqueProduto(record.id,estoque)); actions.prepend(estoque);
+      const estoque=botaoIcone('estoque','Consultar estoque do produto '+record.codigo,()=>consultarEstoqueProduto(record.id,estoque));
+      actions.prepend(estoque);
     }
     td.append(actions);
     tr.append(td);
@@ -458,7 +491,7 @@ async function saveRecord(event) {
   $('close-dialog').disabled=true;
   $('cancel-dialog').disabled=true;
   $('clear-record').disabled=true;
-  button.textContent='Salvando…';
+  rotular(button,'salvar','Salvando…');
   try {
     await api('/api/'+section+(editingId?'/'+editingId:''), {
       method:editingId?'PUT':'POST',body:JSON.stringify(data)
@@ -493,9 +526,14 @@ async function saveRecord(event) {
     $('close-dialog').disabled=false;
     $('cancel-dialog').disabled=false;
     $('clear-record').disabled=false;
-    button.textContent='Salvar cadastro';
+    rotular(button,'salvar','Salvar cadastro');
   }
 }
+// Ícones dos botões fixos da página.
+decorarBotao($('refresh'),'atualizar',true);decorarBotao($('cancel-dialog'),'fechar');decorarBotao($('clear-record'),'limpar');
+rotular($('save-record'),'salvar','Salvar cadastro');$('new-record').querySelector('span:not(#new-label)')?.replaceWith(icone('adicionar'));
+decorarBotao($('os-reload'),'atualizar',true);decorarBotao(document.querySelector('.os-toolbar a.button'),'voltar',true);
+decorarBotao($('os-save-header'),'salvar');decorarBotao($('os-add-button'),'adicionar');decorarBotao($('stock-save'),'salvar');decorarBotao($('stock-reload'),'atualizar');
 $('menu-toggle').addEventListener('click',()=> {
   const expanded=$('sidebar').classList.toggle('open');
   $('menu-toggle').setAttribute('aria-expanded',expanded);
@@ -550,10 +588,7 @@ else if(definitions[section]?.fields) {
       filtros.append(th);
     });
     const th=document.createElement('th');
-    const limpar=document.createElement('button');
-    limpar.type='button';
-    limpar.className='row-action';
-    limpar.textContent='Limpar';
+    const limpar=botaoIcone('limpar','Limpar filtros');
     limpar.addEventListener('click',()=> {
       filtros.querySelectorAll('input').forEach(input=>input.value='');
       Object.keys(filtrosColuna).forEach(key=>delete filtrosColuna[key]);

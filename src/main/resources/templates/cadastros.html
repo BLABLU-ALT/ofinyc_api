@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="pt-BR" xmlns:th="http://www.thymeleaf.org">
+<!-- O menu e os painéis administrativos usam o perfil; o servidor também bloqueia o acesso. -->
 <head>
   <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1">
   <title>OFICYNIC · Cadastros</title>
@@ -19,17 +20,20 @@
 <button class="menu-toggle" id="menu-toggle" aria-expanded="false" aria-controls="sidebar" aria-label="Abrir menu">☰</button>
 <aside class="sidebar" id="sidebar">
   <a class="brand" th:href="@{/}"><span class="brand-mark">O<span>+</span></span><span>OFICYNIC<small>GESTÃO DA OFICINA</small></span></a>
-  <div class="nav-label">ESPAÇO DE TRABALHO</div>
-  <nav aria-label="Menu principal">
-    <a th:href="@{/}" th:classappend="${secao == 'inicio'} ? 'active'" th:attr="aria-current=${secao == 'inicio' ? 'page' : null}"><span class="nav-icon">⌂</span>Visão geral</a>
-    <a th:href="@{/ordens-servico}" th:classappend="${secao == 'ordens-servico' or secao == 'os-detalhe'} ? 'active'" th:attr="aria-current=${secao == 'ordens-servico' or secao == 'os-detalhe' ? 'page' : null}"><span class="nav-icon">▤</span>Ordens de serviço</a>
+  <nav aria-label="Menu principal" th:with="admin=${#authorization.expression('hasRole(''ADMINISTRADOR'')')}">
+    <a th:href="@{/}" th:classappend="${secao == 'inicio'} ? 'active'" th:attr="aria-current=${secao == 'inicio' ? 'page' : null}"><span class="nav-icon" aria-hidden="true">⌂</span>Visão geral</a>
+    <div class="nav-divider"></div><div class="nav-label">OPERAÇÃO</div>
+    <a th:href="@{/estoque}" th:classappend="${secao == 'estoque'} ? 'active'" th:attr="aria-current=${secao == 'estoque' ? 'page' : null}"><span class="nav-icon" aria-hidden="true">▦</span>Estoque</a>
+    <a th:href="@{/ordens-servico}" th:classappend="${secao == 'ordens-servico' or secao == 'os-detalhe'} ? 'active'" th:attr="aria-current=${secao == 'ordens-servico' or secao == 'os-detalhe' ? 'page' : null}"><span class="nav-icon" aria-hidden="true">▤</span>Ordens de serviço</a>
     <div class="nav-divider"></div><div class="nav-label">CADASTROS</div>
-    <a th:href="@{/clientes}" th:classappend="${secao == 'clientes'} ? 'active'" th:attr="aria-current=${secao == 'clientes' ? 'page' : null}"><span class="nav-icon">◉</span>Clientes</a>
-    <a th:href="@{/motocicletas}" th:classappend="${secao == 'motocicletas'} ? 'active'" th:attr="aria-current=${secao == 'motocicletas' ? 'page' : null}"><span class="nav-icon">◇</span>Motocicletas</a>
-    <a th:href="@{/produtos}" th:classappend="${secao == 'produtos'} ? 'active'" th:attr="aria-current=${secao == 'produtos' ? 'page' : null}"><span class="nav-icon">▧</span>Produtos</a>
-    <a th:href="@{/servicos}" th:classappend="${secao == 'servicos'} ? 'active'" th:attr="aria-current=${secao == 'servicos' ? 'page' : null}"><span class="nav-icon">⚒</span>Serviços</a>
-    <a th:if="${#authorization.expression('hasRole(''ADMINISTRADOR'')')}" th:href="@{/funcionarios}" th:classappend="${secao == 'funcionarios'} ? 'active'">Funcionários</a>
-    <a th:href="@{/estoque}" th:classappend="${secao == 'estoque'} ? 'active'">Estoque</a>
+    <a th:href="@{/clientes}" th:classappend="${secao == 'clientes'} ? 'active'" th:attr="aria-current=${secao == 'clientes' ? 'page' : null}"><span class="nav-icon" aria-hidden="true">◉</span>Clientes</a>
+    <a th:href="@{/motocicletas}" th:classappend="${secao == 'motocicletas'} ? 'active'" th:attr="aria-current=${secao == 'motocicletas' ? 'page' : null}"><span class="nav-icon" aria-hidden="true">◇</span>Motocicletas</a>
+    <a th:href="@{/produtos}" th:classappend="${secao == 'produtos'} ? 'active'" th:attr="aria-current=${secao == 'produtos' ? 'page' : null}"><span class="nav-icon" aria-hidden="true">▧</span>Produtos</a>
+    <a th:href="@{/servicos}" th:classappend="${secao == 'servicos'} ? 'active'" th:attr="aria-current=${secao == 'servicos' ? 'page' : null}"><span class="nav-icon" aria-hidden="true">⚒</span>Serviços</a>
+    <th:block th:if="${admin}">
+    <div class="nav-divider"></div><div class="nav-label">ADMINISTRAÇÃO</div>
+    <a th:href="@{/funcionarios}" th:classappend="${secao == 'funcionarios'} ? 'active'" th:attr="aria-current=${secao == 'funcionarios' ? 'page' : null}"><span class="nav-icon" aria-hidden="true">◎</span>Funcionários</a>
+    </th:block>
   </nav>
   <div class="sidebar-bottom"><span class="status-dot"></span> Seu espaço de trabalho<small>OFICYNIC · Versão de estudo</small></div>
 </aside>
@@ -40,18 +44,22 @@
     <section class="page-heading"><div><p class="eyebrow" id="eyebrow">SUA OFICINA, ORGANIZADA</p><h1 id="page-title">Visão geral</h1><p class="subtitle" id="page-description">Um lugar para cuidar da base do seu atendimento.</p></div><button id="new-record" class="button primary" hidden><span>＋</span><span id="new-label">Novo cadastro</span></button></section>
     <section id="dashboard" class="dashboard" hidden aria-label="Painel operacional da oficina">
       <div class="dashboard-toolbar">
-        <div><strong>Painel operacional</strong><p id="dashboard-period-help">Indicadores pela data de abertura e situação atual da OS.</p></div>
+        <div><strong>Painel operacional</strong><p id="dashboard-period-help">Clientes e veículos: total cadastrado. Ordens: data de abertura e situação atual no período.</p></div>
         <div class="dashboard-toolbar-actions"><label for="dashboard-period">Período</label><select id="dashboard-period"><option value="all">Todo o período</option><option value="month">Mês atual</option><option value="30">Últimos 30 dias</option><option value="year">Ano atual</option></select><a class="button primary" href="/ordens-servico?nova=1">＋ Nova OS</a></div>
       </div>
       <div id="dashboard-loading" class="dashboard-loading" role="status">Carregando dados reais da oficina…</div>
       <div class="metric-grid" aria-label="Indicadores principais">
+        <article class="metric-card status-register"><span class="metric-icon" aria-hidden="true">◉</span><div><span>Clientes cadastrados</span><strong id="metric-clients">—</strong></div></article>
+        <article class="metric-card status-register"><span class="metric-icon" aria-hidden="true">◇</span><div><span>Veículos cadastrados</span><strong id="metric-vehicles">—</strong></div></article>
         <article class="metric-card"><span class="metric-icon" aria-hidden="true">▤</span><div><span>Total de OS</span><strong id="metric-total">—</strong></div></article>
+        <article class="metric-card status-budget"><span class="metric-icon" aria-hidden="true">▦</span><div><span>Em orçamento</span><strong id="metric-budget">—</strong></div></article>
         <article class="metric-card status-progress"><span class="metric-icon" aria-hidden="true">▶</span><div><span>Em andamento</span><strong id="metric-progress">—</strong></div></article>
         <article class="metric-card status-done"><span class="metric-icon" aria-hidden="true">✓</span><div><span>Concluídas</span><strong id="metric-done">—</strong></div></article>
-        <article class="metric-card status-budget"><span class="metric-icon" aria-hidden="true">▦</span><div><span>Em orçamento</span><strong id="metric-budget">—</strong></div></article>
+        <article class="metric-card status-canceled"><span class="metric-icon" aria-hidden="true">✕</span><div><span>Canceladas</span><strong id="metric-canceled">—</strong></div></article>
+        <article class="metric-card status-rework"><span class="metric-icon" aria-hidden="true">↻</span><div><span>Retrabalhos</span><strong id="metric-rework">—</strong></div></article>
       </div>
       <section class="dashboard-panel" aria-labelledby="status-title"><div class="dashboard-section-heading"><div><h2 id="status-title">Situação das ordens de serviço</h2><p id="status-context">Situação atual das OS do período selecionado.</p></div></div><div id="status-chart" class="status-chart"></div></section>
-      <section class="dashboard-panel" aria-labelledby="reports-title"><div class="dashboard-section-heading"><div><h2 id="reports-title">Relatórios</h2><p>Disponibilidade atual dos relatórios solicitados.</p></div></div><div class="reports-grid"><article><span aria-hidden="true">▤</span><div><strong>Ordens de serviço</strong><p>PDF ainda não implementado.</p></div></article><article><span aria-hidden="true">▧</span><div><strong>Estoque</strong><p>PDF ainda não implementado.</p></div></article></div></section>
+      <section class="dashboard-panel" aria-labelledby="reports-title" th:if="${#authorization.expression('hasRole(''ADMINISTRADOR'')')}"><div class="dashboard-section-heading"><div><h2 id="reports-title">Relatórios</h2><p>Consultas com filtros e exportação em PDF e Excel (somente administrador).</p></div></div><div class="reports-grid"><a class="report-link" th:href="@{/relatorios(tipo='ordens')}"><span aria-hidden="true">▤</span><div><strong>Ordens de serviço</strong><p>Número, cliente, veículo, abertura, status e valor total.</p></div></a><a class="report-link" th:href="@{/relatorios(tipo='financeiro')}"><span aria-hidden="true">▥</span><div><strong>Controle financeiro</strong><p>Valores orçados, aprovados e concluídos, serviços, produtos e custos registrados.</p></div></a></div></section>
     </section>
     <section class="list-panel" id="listing" hidden aria-label="Lista de cadastros">
       <div class="list-toolbar"><div class="search-wrap"><span aria-hidden="true">⌕</span><label class="sr-only" for="search">Buscar cadastros</label><input type="search" id="search" placeholder="Buscar cadastros…" autocomplete="off"></div><div class="list-controls"><button type="button" class="button subtle" id="refresh">Atualizar</button></div></div>

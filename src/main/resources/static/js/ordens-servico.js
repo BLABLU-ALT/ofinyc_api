@@ -14,7 +14,7 @@
     if(chave==='situacao'){input.append(new Option('Todos',''));[['ORCAMENTO','Orçamento'],['EM_ANDAMENTO','Em andamento'],['CONCLUIDA','Concluída'],['CANCELADA','Cancelada'],['RETRABALHO','Retrabalho']].forEach(([valor,rotulo])=>input.append(new Option(rotulo,valor)));}
     else{input.type=chave==='dataAbertura'?'date':'search';input.placeholder='Filtrar';}
     input.setAttribute('aria-label','Filtrar coluna '+nome);input.addEventListener('input',()=>{filtros[chave]=input.value;renderizar();});th.append(input);linhaFiltros.append(th);});
-  const thLimpar=document.createElement('th');const limpar=document.createElement('button');limpar.type='button';limpar.className='button subtle';limpar.textContent='Limpar';limpar.addEventListener('click',()=>{linhaFiltros.querySelectorAll('input,select').forEach(campo=>campo.value='');Object.keys(filtros).forEach(chave=>delete filtros[chave]);renderizar();});thLimpar.append(limpar);linhaFiltros.append(thLimpar);$('table-head').append(linhaFiltros);
+  const thLimpar=document.createElement('th');const limpar=botaoIcone('limpar','Limpar filtros');limpar.addEventListener('click',()=>{linhaFiltros.querySelectorAll('input,select').forEach(campo=>campo.value='');Object.keys(filtros).forEach(chave=>delete filtros[chave]);renderizar();});thLimpar.append(limpar);linhaFiltros.append(thLimpar);$('table-head').append(linhaFiltros);
   function renderizar(){
     const termo=$('search').value.trim().toLocaleLowerCase('pt-BR');
     const normalizar=valor=>String(valor??'').toLocaleLowerCase('pt-BR');
@@ -27,7 +27,7 @@
       }));
     $('table-body').replaceChildren();
     lista.forEach(o=>{const tr=document.createElement('tr');colunas.forEach(([k])=>{const td=document.createElement('td');td.textContent=valorColuna(o,k);tr.append(td);});
-      const td=document.createElement('td');const link=document.createElement('a');link.className='button';link.href='/ordens-servico/'+o.id;link.textContent='Consultar OS '+o.id;td.append(link);tr.append(td);$('table-body').append(tr);});
+      const td=document.createElement('td');const link=document.createElement('a');link.className='row-action icon-button';link.href='/ordens-servico/'+o.id;link.title='Consultar OS '+o.id;link.setAttribute('aria-label','Consultar OS '+o.id);link.append(icone('consultar'));td.append(link);tr.append(td);$('table-body').append(tr);});
     $('empty-state').hidden=lista.length>0; $('empty-title').textContent='Nenhuma OS encontrada';$('empty-description').textContent='Use Abrir OS para registrar um atendimento.';$('empty-add').hidden=true;$('record-count').textContent=lista.length+' de '+ordens.length+' ordens';
   }
   async function carregar(){
@@ -46,10 +46,10 @@
     definicoes.forEach(([nome,rotulo,tipo,obrigatorio,tamanho])=>{const envoltorio=document.createElement('div');envoltorio.className='form-field';const label=document.createElement('label');label.htmlFor='quick-'+nome;label.textContent=rotulo+(obrigatorio?' *':'');const input=document.createElement('input');input.id='quick-'+nome;input.type=tipo;input.required=obrigatorio;input.disabled=true;input.maxLength=tamanho;input.autocomplete='off';if(nome==='cpf'){input.pattern='[0-9]{11}';input.inputMode='numeric';}envoltorio.append(label,input);grade.append(envoltorio);entradas[nome]=input;});
     const erro=document.createElement('p');erro.className='form-error';erro.hidden=true;
     const acoes=document.createElement('div');acoes.className='quick-actions';
-    const salvar=document.createElement('button');salvar.type='button';salvar.className='button primary';salvar.textContent='Salvar cliente';
+    const salvar=document.createElement('button');salvar.type='button';salvar.className='button primary';rotular(salvar,'salvar','Salvar cliente');
     const cancelar=document.createElement('button');cancelar.type='button';cancelar.className='button subtle';cancelar.textContent='Cancelar';
     acoes.append(salvar,cancelar);area.append(titulo,grade,erro,acoes);
-    const novo=document.createElement('button');novo.type='button';novo.className='button subtle quick-client-open';novo.textContent='＋ Novo cliente';
+    const novo=document.createElement('button');novo.type='button';novo.className='button subtle quick-client-open';rotular(novo,'adicionar','Novo cliente');
     let enviando=false;
     const limpar=()=>{Object.values(entradas).forEach(input=>{input.value='';input.removeAttribute('aria-invalid');});erro.hidden=true;};
     const exibir=visivel=>{area.hidden=!visivel;Object.values(entradas).forEach(input=>input.disabled=!visivel);};
@@ -74,7 +74,7 @@
   }
   async function abrir(){
     if(saving||dialog.open)return;const atual=++geracao;$('record-form').reset();$('form-fields').replaceChildren();$('form-error').hidden=true;
-    $('form-title').textContent='Abrir ordem de serviço';$('form-description').textContent='Carregando cadastros…';$('save-record').disabled=true;$('save-record').hidden=false;$('save-record').textContent='Abrir OS';$('clear-record').hidden=false;limparRapido=null;dialog.showModal();
+    $('form-title').textContent='Abrir ordem de serviço';$('form-description').textContent='Carregando cadastros…';$('save-record').disabled=true;$('save-record').hidden=false;rotular($('save-record'),'salvar','Abrir OS');$('clear-record').hidden=false;limparRapido=null;dialog.showModal();
     try{
       const [clientes,motos,funcionarios,dataServidor]=await Promise.all([api('/api/clientes'),api('/api/motocicletas'),api('/api/funcionarios/ativos'),api('/api/ordens-servico/data-atual')]);if(atual!==geracao||!dialog.open)return;
       if(!funcionarios.length){$('form-description').textContent='Não há funcionário ativo. Peça ao administrador para cadastrar ou reativar um responsável.';return;}
@@ -93,7 +93,7 @@
       };
       [cliente.input,moto.input].forEach(input=>['input','blur','change'].forEach(evento=>input.addEventListener(evento,atualizarCadastroCondicional)));
       atualizarCadastroCondicional();
-      const atualizarMotos=document.createElement('button');atualizarMotos.type='button';atualizarMotos.className='button subtle refresh-motorcycles';atualizarMotos.textContent='↻ Atualizar motocicletas';
+      const atualizarMotos=document.createElement('button');atualizarMotos.type='button';atualizarMotos.className='button subtle refresh-motorcycles';rotular(atualizarMotos,'atualizar','Atualizar motocicletas');
       atualizarMotos.addEventListener('click',async()=>{
         if(cadastroRapidoEnviando||atualizacaoMotosEmAndamento||saving)return;
         const selecionada=moto.valor(),controles=[...dialog.querySelectorAll('button')],estados=controles.map(controle=>[controle,controle.disabled]);

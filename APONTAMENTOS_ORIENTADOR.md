@@ -14,14 +14,15 @@ Legenda: `[ ]` pendente · `[x]` concluído e validado. Nenhum item é marcado s
 
 ## Etapa 1 — Cadastro de clientes e formulários
 
-- [ ] REQ-01 — IF no cadastro do cliente ao abrir OS
+- [x] REQ-01 — IF no cadastro do cliente ao abrir OS
   - Implementado: botão "Novo cliente" e "Cadastrar motocicleta" só aparecem quando a busca não encontra registro (`ordens-servico.js`).
-  - Validação: harness DOM anterior PASS; **pendente conferência visual nesta retomada**.
-- [ ] REQ-02 — Botão limpar campos
-  - Implementado: "Limpar" no cadastro novo e na abertura de OS; não aparece em edição/consulta e não apaga dados salvos (`app.js`, `ordens-servico.js`).
-  - Validação: harness DOM anterior PASS; **pendente conferência visual**.
-- [ ] REQ-03 — Alinhamento dos botões da OS
-  - Implementado: ações agrupadas e alinhadas (`app.css`). **Pendente conferência visual**.
+  - Validação (28/10, navegador, banco de testes): oculto sem busca; visível ao digitar cliente inexistente.
+- [x] REQ-02 — Botão limpar campos
+  - Implementado: "Limpar" no cadastro novo e na abertura de OS; não aparece em edição/consulta e não apaga dados salvos (`app.js`, `ordens-servico.js`); restaura os padrões do formulário de funcionário.
+  - Validação (28/10, navegador): limpou cliente e orientação; manteve a data do servidor.
+- [x] REQ-03 — Alinhamento dos botões da OS
+  - Implementado: ações agrupadas e alinhadas com mesma altura (`app.css`); ícones nos botões (REQ-15).
+  - Validação (28/10, navegador): 1366 px em linha; 390 px em grade sem rolagem horizontal; ações dos itens na mesma linha.
 
 ## Etapa 2 — Datas e aprovação
 
@@ -73,9 +74,17 @@ Legenda: `[ ]` pendente · `[x]` concluído e validado. Nenhum item é marcado s
 
 ## Etapa 6 — Interface, ícones e navegação
 
-- [ ] REQ-15 — Botões somente com ícones
+- [x] REQ-15 — Botões somente com ícones
+  - Arquivos: `app.js` (`icone`, `botaoIcone`, `decorarBotao`), `ordens-servico.js`, `os-detalhe.js`, `app.css`.
+  - Implementado: ícones SVG próprios (lupa, lápis, lixeira, disquete, impressora, documento, planilha, borracha, seta, +, atualizar, caixa); ações de tabela, voltar e atualizar só com ícone (40×40 px) com `title` e `aria-label`; ações de formulário com ícone + texto.
+  - Validação (28/10, navegador): lista, OS, itens e diálogos conferidos em 1366 e 390 px.
 - [ ] REQ-16 — Organização da navegação e aba Relatórios
-- [ ] REQ-17 — Visão Geral com totais de clientes e veículos
+  - Implementado: menu em grupos — Visão geral / OPERAÇÃO (Estoque, Ordens de serviço) / CADASTROS (Clientes, Motocicletas, Produtos, Serviços) / ADMINISTRAÇÃO só administrador (Funcionários); todos com ícone e `aria-current`. Validado no navegador com os dois perfis.
+  - Pendente: link "Relatórios" (entra junto com a central, REQ-19).
+- [x] REQ-17 — Visão Geral com totais de clientes e veículos
+  - Arquivos: `PainelController` (`GET /api/painel/resumo`, `count()` no banco), `cadastros.html`, `app.js`, `app.css`.
+  - Implementado: 8 cards em grade 4×2 (2×4 e 1 coluna em telas menores): clientes, veículos, total de OS, orçamento, em andamento, concluídas, canceladas, retrabalhos; painel de relatórios só para o administrador.
+  - Validação: `painelMostraTotaisReaisDeClientesEVeiculos`; navegador mostrou 1/1 após cadastrar 1 cliente e 1 moto no banco de testes.
 
 ## Etapa 7 — PDF da OS
 
@@ -97,10 +106,12 @@ Legenda: `[ ]` pendente · `[x]` concluído e validado. Nenhum item é marcado s
 | 27/10 | `iniciar-local.ps1 -Teste` (linha de base) | 130 testes, 0 falhas |
 | 28/10 | `iniciar-local.ps1 -Teste` (Etapas 3–4) | 135 testes, 0 falhas |
 | 28/10 | `iniciar-local.ps1 -Teste` (Etapa 5) | 142 testes, 0 falhas |
+| 28/10 | `iniciar-local.ps1 -Teste` (Etapa 6) | 143 testes, 0 falhas |
+| 28/10 | Aplicação na porta 8086 com o banco de testes; navegador interno | Etapas 1–6 conferidas com administrador e funcionário reais |
 
 Ajustes em testes existentes: passaram a rodar como `ADMINISTRADOR` (catálogo agora é administrativo); contagens de migração +1 a cada nova migração (V10, V11); o teste antigo que proibia login no cadastro de funcionário foi adaptado à decisão de 28/10 (login exige senha, perfil fixo); o teste de reserva deixou de enviar preço injetado, porque o REQ-11 passou a aceitar valor informado.
 
 ## Última atividade e próximo passo
 
-- Última atividade: Etapa 5 concluída e testada (142/142).
-- Próximo passo: Etapa 6 — ícones (REQ-15), navegação e aba Relatórios (REQ-16), Visão Geral com clientes e veículos (REQ-17).
+- Última atividade: Etapa 6 concluída (REQ-16 aguarda o link Relatórios); iniciado o `PdfService` (Etapa 7).
+- Próximo passo: Etapa 7 — PDF de aprovação da OS (REQ-18); depois Etapa 8 (REQ-19 a 24).

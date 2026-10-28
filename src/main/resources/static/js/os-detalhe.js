@@ -5,7 +5,7 @@
   const estados={ORCAMENTO:'Orçamento',EM_ANDAMENTO:'Em andamento',CONCLUIDA:'Concluída',CANCELADA:'Cancelada',RETRABALHO:'Retrabalho'};
   const somenteConsulta=()=>['CONCLUIDA','CANCELADA'].includes(ordem.situacao);
   $('page-title').textContent='Ordem de serviço nº '+id;$('breadcrumb').textContent='OS '+id;document.title='OS '+id+' · OFICYNIC';
-  function botao(texto,acao){const b=document.createElement('button');b.type='button';b.className='button';b.textContent=texto;b.addEventListener('click',acao);return b;}
+  function botao(texto,acao,nomeIcone){const b=document.createElement('button');b.type='button';b.className='button';if(nomeIcone)rotular(b,nomeIcone,texto);else b.textContent=texto;b.addEventListener('click',acao);return b;}
   function erro(e){notice(e.mensagem||'Confira os dados e tente novamente.',true);$('notice').scrollIntoView({block:'nearest'});}
   function campo(nome,label,tipo,valor,obrigatorio=true,tamanho=255){const div=document.createElement('div');div.className='form-field'+(tipo==='textarea'?' wide':'');const l=document.createElement('label');l.htmlFor=nome;l.textContent=label+(obrigatorio?' *':'');const input=document.createElement(tipo==='textarea'?'textarea':'input');input.id=nome;input.required=obrigatorio;input.value=valor??'';if(tipo!=='textarea')input.type=tipo;else{input.maxLength=tamanho;input.rows=3;}div.append(l,input);$('os-header-fields').append(div);return input;}
   async function catalogos(){[clientes,motos,funcionarios,servicos,produtos]=await Promise.all([api('/api/clientes'),api('/api/motocicletas'),api('/api/funcionarios/ativos'),api('/api/servicos'),api('/api/produtos')]);}
@@ -42,14 +42,14 @@
     if(ordem.ordemOrigemId)$('os-info').textContent+=' Retrabalho originado da OS '+ordem.ordemOrigemId+'.';
     if(!ordem.funcionarioId&&!finalizada)$('os-info').textContent+=' Complete o funcionário responsável desta OS antiga.';
     $('os-state-actions').replaceChildren();
-    if(ordem.situacao==='ORCAMENTO')$('os-state-actions').append(botao('Registrar aprovação do cliente',()=>executar(`/api/ordens-servico/${id}/aprovacao`,{method:'POST'},'Aprovação registrada; atendimento iniciado.')));
-    if(ordem.situacao==='RETRABALHO')$('os-state-actions').append(botao('Iniciar retrabalho',()=>executar(`/api/ordens-servico/${id}/situacao`,{method:'PUT',body:JSON.stringify({situacao:'EM_ANDAMENTO'})},'Retrabalho iniciado.')));
+    if(ordem.situacao==='ORCAMENTO')$('os-state-actions').append(botao('Registrar aprovação do cliente',()=>executar(`/api/ordens-servico/${id}/aprovacao`,{method:'POST'},'Aprovação registrada; atendimento iniciado.'),'aprovar'));
+    if(ordem.situacao==='RETRABALHO')$('os-state-actions').append(botao('Iniciar retrabalho',()=>executar(`/api/ordens-servico/${id}/situacao`,{method:'PUT',body:JSON.stringify({situacao:'EM_ANDAMENTO'})},'Retrabalho iniciado.'),'retrabalho'));
     if(ordem.situacao==='EM_ANDAMENTO'){
-      $('os-state-actions').append(botao('Voltar para orçamento',()=>executar(`/api/ordens-servico/${id}/situacao`,{method:'PUT',body:JSON.stringify({situacao:'ORCAMENTO'})},'Status atualizado.')));
-      $('os-state-actions').append(botao('Concluir OS',()=>executar(`/api/ordens-servico/${id}/finalizacao`,{method:'POST'},'OS concluída; produtos consumidos e empenhos liberados.')));
+      $('os-state-actions').append(botao('Voltar para orçamento',()=>executar(`/api/ordens-servico/${id}/situacao`,{method:'PUT',body:JSON.stringify({situacao:'ORCAMENTO'})},'Status atualizado.'),'voltar'));
+      $('os-state-actions').append(botao('Concluir OS',()=>executar(`/api/ordens-servico/${id}/finalizacao`,{method:'POST'},'OS concluída; produtos consumidos e empenhos liberados.'),'aprovar'));
     }
-    if(!finalizada)$('os-state-actions').append(botao('Cancelar OS',()=>executar(`/api/ordens-servico/${id}/cancelamento`,{method:'POST'},'OS cancelada; produtos liberados sem movimentação física.')));
-    if(ordem.situacao==='CONCLUIDA')$('os-state-actions').append(botao('Criar retrabalho',criarRetrabalho));
+    if(!finalizada)$('os-state-actions').append(botao('Cancelar OS',()=>executar(`/api/ordens-servico/${id}/cancelamento`,{method:'POST'},'OS cancelada; produtos liberados sem movimentação física.'),'cancelar'));
+    if(ordem.situacao==='CONCLUIDA')$('os-state-actions').append(botao('Criar retrabalho',criarRetrabalho,'retrabalho'));
   }
   function totais(){
     $('os-totals').replaceChildren();[['Serviços',ordem.totalServicos],['Produtos',ordem.totalProdutos],['Total da OS',ordem.valorTotal]].forEach(([nome,valor])=>{const div=document.createElement('div'),l=document.createElement('span'),v=document.createElement('strong');l.textContent=nome;v.textContent=money.format(valor);div.append(l,v);$('os-totals').append(div);});
@@ -66,8 +66,8 @@
       qtd.setAttribute('aria-label','Quantidade do item '+(n+1));preco.setAttribute('aria-label','Valor unitário do item '+(n+1));
       const editavel=!somenteConsulta();qtd.disabled=!editavel;preco.disabled=!editavel;
       tr.children[4].append(qtd);tr.children[6].append(preco);
-      if(editavel){tr.children[8].append(botao('Salvar',()=>{if(!qtd.reportValidity()||!preco.reportValidity())return;const dados={quantidade:qtd.value,valorUnitario:preco.value};executar(`/api/ordens-servico/${id}/${item.tipo}/${item.id}`,{method:'PUT',body:JSON.stringify(dados)},'Item atualizado.');}),botao('Remover',()=>executar(`/api/ordens-servico/${id}/${item.tipo}/${item.id}`,{method:'DELETE'},'Item removido; eventual empenho liberado.')));
-        if(item.tipo==='produtos')tr.children[8].append(botao('Estoque',()=>consultarEstoqueProduto(item.produtoId,tr.children[8].querySelector('button:last-child'))));
+      if(editavel){tr.children[8].append(botaoIcone('salvar','Salvar item '+(n+1),()=>{if(!qtd.reportValidity()||!preco.reportValidity())return;const dados={quantidade:qtd.value,valorUnitario:preco.value};executar(`/api/ordens-servico/${id}/${item.tipo}/${item.id}`,{method:'PUT',body:JSON.stringify(dados)},'Item atualizado.');}),botaoIcone('excluir','Remover item '+(n+1),()=>executar(`/api/ordens-servico/${id}/${item.tipo}/${item.id}`,{method:'DELETE'},'Item removido; eventual empenho liberado.')));
+        if(item.tipo==='produtos'){const estoque=botaoIcone('estoque','Consultar estoque do item '+(n+1),()=>consultarEstoqueProduto(item.produtoId,estoque));tr.children[8].append(estoque);}
       }else tr.children[8].textContent='Somente consulta';
       $('os-items-body').append(tr);
     });

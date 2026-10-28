@@ -198,6 +198,14 @@ class ApontamentosIntegrationTest {
         enviar(post("/api/funcionarios"), "{\"nome\":\"Sem senha\",\"login\":\"sem.senha\"}", 400);
     }
 
+    // REQ-17
+    @Test void painelMostraTotaisReaisDeClientesEVeiculos() throws Exception {
+        int clientes = jdbc.queryForObject("SELECT count(*) FROM clientes", Integer.class);
+        int motos = jdbc.queryForObject("SELECT count(*) FROM motocicletas", Integer.class);
+        mvc.perform(funcionario(get("/api/painel/resumo"))).andExpect(status().isOk())
+                .andExpect(jsonPath("$.clientes").value(clientes)).andExpect(jsonPath("$.motocicletas").value(motos));
+    }
+
     // REQ-10
     @Test void precoDeCustoECatalogoSaoDoAdministrador() throws Exception {
         long p = produto("120", "70");
