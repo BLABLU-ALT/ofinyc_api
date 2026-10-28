@@ -30,6 +30,13 @@ const definitions = {
 }
 ;
 const $ = id => document.getElementById(id);
+// O perfil só ajusta a tela; as permissões são conferidas no servidor.
+const administrador = document.querySelector('meta[name="perfil"]')?.content === 'ADMINISTRADOR';
+const secoesSoAdministradorAltera = ['produtos','servicos','funcionarios'];
+if(administrador) {
+  definitions.produtos.columns.push(['precoCusto','Preço de custo','money']);
+  definitions.produtos.fields.splice(2,0,['precoCusto','Preço de custo (R$)','number',false,null,'','Visível somente ao administrador.']);
+}
 const section = document.body.dataset.secao;
 const unidadesMedida = [['PC','Peça'],['MT','Metro'],['LT','Litro'],['KG','Quilograma'],['PAR','Par'],['JG','Jogo'],['KT','Kit']];
 const money = new Intl.NumberFormat('pt-BR', {
@@ -349,7 +356,7 @@ function renderRows() {
     def.columns.forEach(([key,label,format])=> {
       const td=document.createElement('td');
       const value=record[key];
-      td.textContent=format==='money'?money.format(value):(['estoque','empenho','saldo'].includes(key)?new Intl.NumberFormat('pt-BR',{maximumFractionDigits:3}).format(value??0):(value??'—'));
+      td.textContent=format==='money'?(value==null?'—':money.format(value)):(['estoque','empenho','saldo'].includes(key)?new Intl.NumberFormat('pt-BR',{maximumFractionDigits:3}).format(value??0):(value??'—'));
       tr.append(td);
     }
     );
@@ -368,7 +375,8 @@ function renderRows() {
     edit.textContent='✎ Editar';
     edit.setAttribute('aria-label','Editar '+(record.nome||record.placa||record.chassi||record.codigo));
     edit.addEventListener('click',()=>openForm(record,false));
-    actions.append(consult,edit);
+    actions.append(consult);
+    if(administrador || !secoesSoAdministradorAltera.includes(section)) actions.append(edit);
     if(section==='produtos') {
       const estoque=document.createElement('button'); estoque.type='button'; estoque.className='row-action'; estoque.textContent='⌕ Estoque';
       estoque.setAttribute('aria-label','Consultar estoque do produto '+record.codigo);
@@ -504,8 +512,9 @@ else if(definitions[section]?.fields) {
   $('eyebrow').textContent='CADASTROS DA OFICINA';
   $('page-description').textContent=def.description;
   $('listing').hidden=false;
-  $('new-record').hidden=false;
+  $('new-record').hidden=!administrador && secoesSoAdministradorAltera.includes(section);
   $('new-label').textContent='Cadastrar '+def.singular;
+  if($('new-record').hidden) $('empty-add').remove();
   const tr=document.createElement('tr');
   [...def.columns,['acoes','Ações']].forEach(([,label])=> {
     const th=document.createElement('th');
@@ -550,7 +559,7 @@ else if(definitions[section]?.fields) {
   def.fields.forEach(addField);
   if(def.note)$('form-description').textContent+=' '+def.note;
   $('new-record').addEventListener('click',()=>openForm());
-  $('empty-add').addEventListener('click',()=>openForm());
+  $('empty-add')?.addEventListener('click',()=>openForm());
   $('clear-record').addEventListener('click',limparNovoCadastro);
   $('search').addEventListener('input',()=>{paginaAtual=1;renderRows();});
   $('refresh').addEventListener('click',loadRecords);

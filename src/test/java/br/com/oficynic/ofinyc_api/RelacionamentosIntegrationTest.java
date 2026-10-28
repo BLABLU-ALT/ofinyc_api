@@ -63,7 +63,7 @@ class RelacionamentosIntegrationTest {
                 .andExpect(jsonPath("$.cliente").doesNotExist());
     }
 
-    @Test @WithMockUser
+    @Test @WithMockUser(roles = "ADMINISTRADOR")
     void variasOrdensAparecemNoClienteSemRecursao() throws Exception {
         long cliente = cliente("90000000175");
         long outro = cliente("90000000256");
@@ -87,7 +87,7 @@ class RelacionamentosIntegrationTest {
         assertEquals(2, jdbc.queryForObject("SELECT count(*) FROM ordens_servico WHERE cliente_id = ?", Integer.class, cliente));
     }
 
-    @Test @WithMockUser
+    @Test @WithMockUser(roles = "ADMINISTRADOR")
     void vinculoInexistenteNaoAlteraOrdem() throws Exception {
         long cliente = cliente("90000000337");
         long ordem = ordem();
@@ -100,7 +100,7 @@ class RelacionamentosIntegrationTest {
         assertEquals(cliente, jdbc.queryForObject("SELECT cliente_id FROM ordens_servico WHERE id = ?", Long.class, ordem));
     }
 
-    @Test @WithMockUser
+    @Test @WithMockUser(roles = "ADMINISTRADOR")
     void postgresImpedeVinculoInvalidoEExclusaoDeClienteReferenciado() throws Exception {
         long cliente = cliente("90000000418");
         long ordem = ordem();
@@ -112,7 +112,7 @@ class RelacionamentosIntegrationTest {
         assertEquals(cliente, jdbc.queryForObject("SELECT cliente_id FROM ordens_servico WHERE id = ?", Long.class, ordem));
     }
 
-    @Test @WithMockUser
+    @Test @WithMockUser(roles = "ADMINISTRADOR")
     void validaDadosEExigeCsrf() throws Exception {
         long antes = jdbc.queryForObject("SELECT count(*) FROM ordens_servico", Long.class);
         mvc.perform(post("/api/ordens-servico").with(csrf()).contentType(MediaType.APPLICATION_JSON).content("{}"))

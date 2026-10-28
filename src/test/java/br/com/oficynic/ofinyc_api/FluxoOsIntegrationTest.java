@@ -28,7 +28,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 // Cada chamada confirma no PostgreSQL; a consulta posterior não depende da transação do teste.
 @SpringBootTest
 @AutoConfigureMockMvc
-@WithMockUser
+@WithMockUser(roles = "ADMINISTRADOR")
 class FluxoOsIntegrationTest {
     @Autowired MockMvc mvc;
     @Autowired JdbcTemplate jdbc;
@@ -215,7 +215,7 @@ class FluxoOsIntegrationTest {
     void rollbackEConstraintsNoPostgres() throws Exception {
         long os=ordem(), servico=servico();
         var transacao=new TransactionTemplate(transactionManager);
-        assertThrows(IllegalStateException.class,()->transacao.execute(status->{service.adicionarServico(os,servico,1,new BigDecimal("1.00")); throw new IllegalStateException("Falha simulada antes do commit");}));
+        assertThrows(IllegalStateException.class,()->transacao.execute(status->{service.adicionarServico(os,servico,1,new BigDecimal("1.00"),true); throw new IllegalStateException("Falha simulada antes do commit");}));
         assertEquals(0,jdbc.queryForObject("SELECT count(*) FROM itens_servico_os WHERE ordem_servico_id=?",Integer.class,os));
         for(String sql:new String[]{"UPDATE ordens_servico SET situacao='INVALIDA' WHERE id="+os,
                 "UPDATE ordens_servico SET situacao='CONCLUIDA' WHERE id="+os,
@@ -248,7 +248,7 @@ class FluxoOsIntegrationTest {
                 service.finalizarOrdem(os,"user"); return null;
             }));
             assertTrue(bloqueada.await(10,TimeUnit.SECONDS));
-            Future<?> inclusao=executor.submit(()-> { tentando.countDown(); service.adicionarServico(os,servico,1,new BigDecimal("2.00")); });
+            Future<?> inclusao=executor.submit(()-> { tentando.countDown(); service.adicionarServico(os,servico,1,new BigDecimal("2.00"),true); });
             assertTrue(tentando.await(10,TimeUnit.SECONDS));
             assertThrows(TimeoutException.class,()->inclusao.get(200,TimeUnit.MILLISECONDS));
             liberar.countDown(); finalizacao.get(10,TimeUnit.SECONDS);

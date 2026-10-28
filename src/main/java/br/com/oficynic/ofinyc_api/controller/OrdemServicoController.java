@@ -13,6 +13,7 @@ import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
 import java.security.Principal;
+import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.http.ResponseEntity;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.*;
@@ -27,21 +28,24 @@ public class OrdemServicoController {
     }
 
     public record Abertura(
-            @NotBlank(message = "Informe a descrição.") @Size(max = 255) String descricao,
+            @NotBlank(message = "Informe a orientação do cliente.") @Size(max = 255) String descricao,
             @NotNull(message = "Selecione o cliente.") @Positive Long clienteId,
             @NotNull(message = "Selecione a motocicleta.") @Positive Long motocicletaId,
             LocalDate dataAbertura,
             @NotNull(message = "Selecione o funcionário responsável.") @Positive Long funcionarioId) { }
 
     public record Edicao(
-            @NotBlank(message = "Informe a descrição.") @Size(max = 255) String descricao,
+            @NotBlank(message = "Informe a orientação do cliente.") @Size(max = 255) String descricao,
+            @Size(max = 1000) String parecerTecnico,
             @NotNull @Positive Long clienteId, @NotNull @Positive Long motocicletaId,
             LocalDate dataAbertura,
             @NotNull(message = "Selecione o funcionário responsável.") @Positive Long funcionarioId) { }
 
     public record InclusaoProduto(@NotNull @Positive Long produtoId,
-            @NotNull @Positive @Digits(integer = 12, fraction = 3) BigDecimal quantidade) { }
-    public record EdicaoProduto(@NotNull @Positive @Digits(integer = 12, fraction = 3) BigDecimal quantidade) { }
+            @NotNull @Positive @Digits(integer = 12, fraction = 3) BigDecimal quantidade,
+            @DecimalMin("0.00") @Digits(integer = 12, fraction = 2) BigDecimal valorUnitario) { }
+    public record EdicaoProduto(@NotNull @Positive @Digits(integer = 12, fraction = 3) BigDecimal quantidade,
+            @DecimalMin("0.00") @Digits(integer = 12, fraction = 2) BigDecimal valorUnitario) { }
     public record ProdutoConsulta(Long id, Long produtoId, String codigo, String descricao, BigDecimal quantidade,
             String unidadeMedida, BigDecimal valorUnitario, BigDecimal subtotal) { }
 
@@ -62,7 +66,8 @@ public class OrdemServicoController {
             String marca, String modelo, SituacaoOrdemServico situacao, LocalDate dataFinalizacao,
             List<ItemConsulta> servicos, BigDecimal valorTotal, Long funcionarioId, String funcionarioNome,
             List<ProdutoConsulta> produtos, BigDecimal totalServicos, BigDecimal totalProdutos,
-            Long ordemOrigemId, LocalDate dataCriacao, LocalDate dataAprovacao, LocalDate dataAberturaAnterior) { }
+            Long ordemOrigemId, LocalDate dataCriacao, LocalDate dataAprovacao, LocalDate dataAberturaAnterior,
+            String parecerTecnico) { }
 
     @GetMapping("/data-atual")
     public LocalDate dataAtual() { return service.dataAtual(); }
@@ -91,20 +96,23 @@ public class OrdemServicoController {
     }
 
     @PutMapping("/{id}")
-    public Consulta atualizar(@PathVariable Long id, @Valid @RequestBody Edicao dados) {
-        return consulta(service.atualizar(id, dados.descricao(), dados.dataAbertura(), dados.clienteId(), dados.motocicletaId(), dados.funcionarioId()));
+    public Consulta atualizar(@PathVariable Long id, @Valid @RequestBody Edicao dados, HttpServletRequest request) {
+        return consulta(service.atualizar(id, dados.descricao(), dados.parecerTecnico(), dados.clienteId(),
+                dados.motocicletaId(), dados.funcionarioId(), administrador(request)));
     }
 
     @PostMapping("/{id}/servicos")
-    public ResponseEntity<Consulta> adicionarServico(@PathVariable Long id, @Valid @RequestBody InclusaoServico dados) {
+    public ResponseEntity<Consulta> adicionarServico(@PathVariable Long id, @Valid @RequestBody InclusaoServico dados,
+                                                     HttpServletRequest request) {
         var ordem = service.adicionarServico(id, dados.servicoId(),
-                dados.quantidade() == null ? 1 : dados.quantidade().intValueExact(), dados.valorUnitario());
+                dados.quantidade() == null ? 1 : dados.quantidade().intValueExact(), dados.valorUnitario(), administrador(request));
         return ResponseEntity.status(201).body(consulta(ordem));
     }
 
     @PutMapping("/{id}/servicos/{itemId}")
-    public Consulta atualizarItem(@PathVariable Long id, @PathVariable Long itemId, @Valid @RequestBody EdicaoItem dados) {
-        return consulta(service.atualizarItem(id, itemId, dados.quantidade().intValueExact(), dados.valorUnitario()));
+    public Consulta atualizarItem(@PathVariable Long id, @PathVariable Long itemId, @Valid @RequestBody EdicaoItem dados,
+                                  HttpServletRequest request) {
+        return consulta(service.atualizarItem(id, itemId, dados.quantidade().intValueExact(), dados.valorUnitario(), administrador(request)));
     }
 
     @DeleteMapping("/{id}/servicos/{itemId}")
@@ -135,12 +143,15 @@ public class OrdemServicoController {
     }
 
     @PostMapping("/{id}/produtos")
-    public ResponseEntity<Consulta> adicionarProduto(@PathVariable Long id, @Valid @RequestBody InclusaoProduto dados) {
-        return ResponseEntity.status(201).body(consulta(service.adicionarProduto(id, dados.produtoId(), dados.quantidade())));
+    public ResponseEntity<Consulta> adicionarProduto(@PathVariable Long id, @Valid @RequestBody InclusaoProduto dados,
+                                                     HttpServletRequest request) {
+        return ResponseEntity.status(201).body(consulta(service.adicionarProduto(id, dados.produtoId(), dados.quantidade(),
+                dados.valorUnitario(), administrador(request))));
     }
     @PutMapping("/{id}/produtos/{itemId}")
-    public Consulta atualizarProduto(@PathVariable Long id, @PathVariable Long itemId, @Valid @RequestBody EdicaoProduto dados) {
-        return consulta(service.atualizarProduto(id, itemId, dados.quantidade()));
+    public Consulta atualizarProduto(@PathVariable Long id, @PathVariable Long itemId, @Valid @RequestBody EdicaoProduto dados,
+                                     HttpServletRequest request) {
+        return consulta(service.atualizarProduto(id, itemId, dados.quantidade(), dados.valorUnitario(), administrador(request)));
     }
     @DeleteMapping("/{id}/produtos/{itemId}")
     public Consulta removerProduto(@PathVariable Long id, @PathVariable Long itemId) {
@@ -167,7 +178,12 @@ public class OrdemServicoController {
                 funcionario == null ? null : funcionario.getId(), funcionario == null ? null : funcionario.getNome(),
                 produtos, ordem.calcularTotalServicos(), ordem.calcularTotalProdutos(),
                 ordem.getOrdemOrigem() == null ? null : ordem.getOrdemOrigem().getId(),
-                ordem.getDataCriacao(), ordem.getDataAprovacao(), ordem.getDataAberturaAnterior());
+                ordem.getDataCriacao(), ordem.getDataAprovacao(), ordem.getDataAberturaAnterior(),
+                ordem.getParecerTecnico());
+    }
+
+    private boolean administrador(HttpServletRequest request) {
+        return request.isUserInRole("ADMINISTRADOR");
     }
 
     // Rotas da aula preservadas; suas gravações passam pelas mesmas proteções do service.

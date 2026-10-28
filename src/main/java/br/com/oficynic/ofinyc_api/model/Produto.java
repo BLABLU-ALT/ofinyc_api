@@ -35,6 +35,12 @@ public class Produto {
     @Column(name = "preco_venda", nullable = false, precision = 14, scale = 2)
     private BigDecimal precoVenda;
 
+    // Informação administrativa: as consultas só a exibem ao administrador.
+    @DecimalMin(value = "0.00", message = "O preço de custo não pode ser negativo.")
+    @Digits(integer = 12, fraction = 2)
+    @Column(name = "preco_custo", precision = 14, scale = 2)
+    private BigDecimal precoCusto;
+
     @NotBlank(message = "Informe a unidade de medida.")
     @Size(max = 12)
     @Column(name = "unidade_medida", length = 12)

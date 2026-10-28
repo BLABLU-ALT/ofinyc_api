@@ -108,7 +108,7 @@
         finally{atualizacaoMotosEmAndamento=false;if(atual===geracao&&dialog.open&&!saving){estados.forEach(([controle,desabilitado])=>controle.disabled=desabilitado);moto.desabilitar(false);}}
       });
       $('form-fields').append(cliente.elemento,rapido.novo,rapido.area,moto.elemento,cadastrarMoto,atualizarMotos,funcionario.elemento);
-      campo('data','Data de abertura','date',dataServidor).readOnly=true;campo('descricao','Orientações para o serviço','textarea','');
+      campo('data','Data de abertura','date',dataServidor).readOnly=true;campo('descricao','Orientação do cliente','textarea','');
       $('form-description').textContent='Digite código ou nome e confirme a referência. A lupa abre a pesquisa.';$('save-record').disabled=false;cliente.input.focus();
     }catch(e){if(atual===geracao&&dialog.open){$('form-error').textContent=e.mensagem;$('form-error').hidden=false;}}
   }

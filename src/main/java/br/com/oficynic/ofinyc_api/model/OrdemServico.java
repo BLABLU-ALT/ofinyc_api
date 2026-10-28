@@ -42,6 +42,11 @@ public class OrdemServico {
     @Column(nullable = false, length = 255)
     private String descricao;
 
+    // Avaliação técnica do funcionário; não substitui a orientação do cliente (descricao).
+    @Size(max = 1000)
+    @Column(name = "parecer_tecnico", length = 1000)
+    private String parecerTecnico;
+
     @Column(nullable = false)
     private LocalDate dataAbertura;
 

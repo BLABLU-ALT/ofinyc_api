@@ -19,6 +19,9 @@ public class ItemProdutoOS {
     private BigDecimal valorUnitario;
     @Column(name = "unidade_medida", nullable = false, length = 12)
     private String unidadeMedida;
+    // Custo do produto no momento da inclusão; nulo se não havia custo cadastrado.
+    @Column(name = "custo_unitario", precision = 14, scale = 2)
+    private BigDecimal custoUnitario;
     public BigDecimal calcularSubtotal() {
         return quantidade.multiply(valorUnitario).setScale(2, RoundingMode.HALF_UP);
     }

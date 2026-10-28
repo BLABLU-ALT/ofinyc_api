@@ -47,7 +47,7 @@ class CadastrosIntegrationTest {
         );
     }
 
-    @ParameterizedTest @MethodSource("cadastros") @WithMockUser
+    @ParameterizedTest @MethodSource("cadastros") @WithMockUser(roles = "ADMINISTRADOR")
     void cadastraConsultaEditaNoPostgres(String tabela, String campo, String antigo, String novo, String body) throws Exception {
         body = comProprietario(tabela, body);
         String salvo = mvc.perform(post("/api/"+tabela).with(csrf()).contentType(MediaType.APPLICATION_JSON)
@@ -76,7 +76,7 @@ class CadastrosIntegrationTest {
         );
     }
 
-    @ParameterizedTest @MethodSource("duplicidades") @WithMockUser
+    @ParameterizedTest @MethodSource("duplicidades") @WithMockUser(roles = "ADMINISTRADOR")
     void impedeDuplicidadeCriacaoEEdicao(String tabela,String campo,String primeiro,String segundo,String body) throws Exception {
         body = comProprietario(tabela, body);
         mvc.perform(post("/api/"+tabela).with(csrf()).contentType(MediaType.APPLICATION_JSON).content(body)).andExpect(status().isCreated());
@@ -91,7 +91,7 @@ class CadastrosIntegrationTest {
         assertEquals(2,jdbc.queryForObject("SELECT count(*) FROM "+tabela,Integer.class));
     }
 
-    @ParameterizedTest @MethodSource("cadastros") @WithMockUser
+    @ParameterizedTest @MethodSource("cadastros") @WithMockUser(roles = "ADMINISTRADOR")
     void rejeitaVazioENaoGrava(String tabela,String a,String b,String c,String body) throws Exception {
         mvc.perform(post("/api/"+tabela).with(csrf()).contentType(MediaType.APPLICATION_JSON).content("{}"))
                 .andExpect(status().isBadRequest()).andExpect(jsonPath("$.campos").isMap());
@@ -103,13 +103,13 @@ class CadastrosIntegrationTest {
         mvc.perform(get("/api/"+tabela)).andExpect(status().isUnauthorized());
     }
 
-    @ParameterizedTest @MethodSource("cadastros") @WithMockUser
+    @ParameterizedTest @MethodSource("cadastros") @WithMockUser(roles = "ADMINISTRADOR")
     void exigeCsrf(String tabela,String a,String b,String c,String body) throws Exception {
         mvc.perform(post("/api/"+tabela).contentType(MediaType.APPLICATION_JSON).content(body)).andExpect(status().isForbidden());
         assertEquals(0,jdbc.queryForObject("SELECT count(*) FROM "+tabela,Integer.class));
     }
 
-    @Test @WithMockUser
+    @Test @WithMockUser(roles = "ADMINISTRADOR")
     void rejeitaPrecoNegativoEPrecisaoExcessiva() throws Exception {
         for(String preco:new String[]{"-1","1.234","1000000000000"}) {
             mvc.perform(post("/api/produtos").with(csrf()).contentType(MediaType.APPLICATION_JSON)
@@ -142,7 +142,7 @@ class CadastrosIntegrationTest {
         });
     }
 
-    @Test @WithMockUser
+    @Test @WithMockUser(roles = "ADMINISTRADOR")
     void paginasRenderizamSemErro() throws Exception {
         for(String pagina:new String[]{"/","/clientes","/motocicletas","/produtos","/servicos"})
             mvc.perform(get(pagina)).andExpect(status().isOk()).andExpect(content().contentTypeCompatibleWith(MediaType.TEXT_HTML));

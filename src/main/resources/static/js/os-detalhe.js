@@ -7,7 +7,7 @@
   $('page-title').textContent='Ordem de serviço nº '+id;$('breadcrumb').textContent='OS '+id;document.title='OS '+id+' · OFICYNIC';
   function botao(texto,acao){const b=document.createElement('button');b.type='button';b.className='button';b.textContent=texto;b.addEventListener('click',acao);return b;}
   function erro(e){notice(e.mensagem||'Confira os dados e tente novamente.',true);$('notice').scrollIntoView({block:'nearest'});}
-  function campo(nome,label,tipo,valor){const div=document.createElement('div');div.className='form-field'+(tipo==='textarea'?' wide':'');const l=document.createElement('label');l.htmlFor=nome;l.textContent=label+' *';const input=document.createElement(tipo==='textarea'?'textarea':'input');input.id=nome;input.required=true;input.value=valor??'';if(tipo!=='textarea')input.type=tipo;else{input.maxLength=255;input.rows=3;}div.append(l,input);$('os-header-fields').append(div);return input;}
+  function campo(nome,label,tipo,valor,obrigatorio=true,tamanho=255){const div=document.createElement('div');div.className='form-field'+(tipo==='textarea'?' wide':'');const l=document.createElement('label');l.htmlFor=nome;l.textContent=label+(obrigatorio?' *':'');const input=document.createElement(tipo==='textarea'?'textarea':'input');input.id=nome;input.required=obrigatorio;input.value=valor??'';if(tipo!=='textarea')input.type=tipo;else{input.maxLength=tamanho;input.rows=3;}div.append(l,input);$('os-header-fields').append(div);return input;}
   async function catalogos(){[clientes,motos,funcionarios,servicos,produtos]=await Promise.all([api('/api/clientes'),api('/api/motocicletas'),api('/api/funcionarios'),api('/api/servicos'),api('/api/produtos')]);}
   function cabecalho(){
     $('os-header-fields').replaceChildren();
@@ -23,8 +23,12 @@
       moto.input.value=ordem.motocicletaId+' · '+(vinculada?.placa||vinculada?.chassi||ordem.placa||ordem.chassi||'Moto vinculada');
     }
     $('os-header-fields').append(cliente.elemento,moto.elemento,funcionario.elemento);
-    campo('header-data','Data de abertura','date',ordem.dataAbertura).readOnly=true;campo('header-descricao','Orientações para o serviço','textarea',ordem.descricao);
-    [cliente,moto,funcionario].forEach(b=>b.desabilitar(finalizada));$('header-data').disabled=$('header-descricao').disabled=finalizada;
+    campo('header-data','Data de abertura','date',ordem.dataAbertura).readOnly=true;
+    // Orientação do cliente: registrada na abertura; depois, somente o administrador corrige.
+    const orientacao=campo('header-descricao','Orientação do cliente','textarea',ordem.descricao);
+    if(!administrador){orientacao.readOnly=true;orientacao.title='Somente o administrador pode alterar a orientação do cliente.';}
+    campo('header-parecer','Parecer técnico','textarea',ordem.parecerTecnico,false,1000).placeholder='Avaliação, diagnóstico ou observação técnica do atendimento.';
+    [cliente,moto,funcionario].forEach(b=>b.desabilitar(finalizada));$('header-data').disabled=$('header-descricao').disabled=$('header-parecer').disabled=finalizada;
     $('os-save-header').hidden=finalizada;$('os-status').textContent=estados[ordem.situacao];
     $('os-workspace').classList.toggle('somente-consulta',finalizada);
     if(ordem.situacao==='CONCLUIDA')$('os-info').textContent='Concluída em '+ordem.dataFinalizacao.split('-').reverse().join('/')+'. Dados e itens somente para consulta.';
@@ -58,9 +62,9 @@
       celulas.forEach(v=>{const td=document.createElement('td');if(v!==null)td.textContent=v;tr.append(td);});
       const qtd=numero(item.quantidade,false,item.tipo==='produtos'),preco=numero(item.valorUnitario,true);
       qtd.setAttribute('aria-label','Quantidade do item '+(n+1));preco.setAttribute('aria-label','Valor unitário do item '+(n+1));
-      const editavel=!somenteConsulta();qtd.disabled=!editavel;preco.readOnly=item.tipo==='produtos';preco.disabled=!editavel;
+      const editavel=!somenteConsulta();qtd.disabled=!editavel;preco.disabled=!editavel;
       tr.children[4].append(qtd);tr.children[6].append(preco);
-      if(editavel){tr.children[8].append(botao('Salvar',()=>{if(!qtd.reportValidity()||!preco.reportValidity())return;const dados={quantidade:qtd.value};if(item.tipo==='servicos')dados.valorUnitario=preco.value;executar(`/api/ordens-servico/${id}/${item.tipo}/${item.id}`,{method:'PUT',body:JSON.stringify(dados)},'Item atualizado.');}),botao('Remover',()=>executar(`/api/ordens-servico/${id}/${item.tipo}/${item.id}`,{method:'DELETE'},'Item removido; eventual empenho liberado.')));
+      if(editavel){tr.children[8].append(botao('Salvar',()=>{if(!qtd.reportValidity()||!preco.reportValidity())return;const dados={quantidade:qtd.value,valorUnitario:preco.value};executar(`/api/ordens-servico/${id}/${item.tipo}/${item.id}`,{method:'PUT',body:JSON.stringify(dados)},'Item atualizado.');}),botao('Remover',()=>executar(`/api/ordens-servico/${id}/${item.tipo}/${item.id}`,{method:'DELETE'},'Item removido; eventual empenho liberado.')));
         if(item.tipo==='produtos')tr.children[8].append(botao('Estoque',()=>consultarEstoqueProduto(item.produtoId,tr.children[8].querySelector('button:last-child'))));
       }else tr.children[8].textContent='Somente consulta';
       $('os-items-body').append(tr);
@@ -68,8 +72,8 @@
   }
   function configurarInclusao(){
     const tipo=$('os-add-type').value,produto=tipo==='produtos';$('os-add-reference').replaceChildren();
-    referencia=criarBusca({nome:'add-reference',rotulo:produto?'Produto':'Serviço',registros:()=>produto?produtos:servicos,descricao:r=>r.descricao&&produto?r.descricao:r.nome,codigo:r=>produto?r.codigo:String(r.id),chaves:r=>produto?[r.id,r.codigo,r.descricao]:[r.id,r.nome,r.descricao],aoSelecionar:r=>{$('os-add-price').value=r?(produto?r.precoVenda:r.preco):0;$('os-add-info').textContent=r&&produto?`${r.unidadeMedida||'Unidade não informada'} · Estoque físico: ${r.estoque}; empenho: ${r.empenho}; disponível: ${r.saldo}. Inclusão reserva, sem saída física.`:'';}});
-    $('os-add-reference').append(referencia.elemento);$('os-add-quantity').min=produto?'0.001':'1';$('os-add-quantity').step=produto?'0.001':'1';$('os-add-quantity').max=produto?'999999999999.999':'2147483647';$('os-add-quantity').value='1';$('os-add-price').value=0;$('os-add-price').readOnly=produto;$('os-add-info').textContent='';
+    referencia=criarBusca({nome:'add-reference',rotulo:produto?'Produto':'Serviço',registros:()=>produto?produtos:servicos,descricao:r=>r.descricao&&produto?r.descricao:r.nome,codigo:r=>produto?r.codigo:String(r.id),chaves:r=>produto?[r.id,r.codigo,r.descricao]:[r.id,r.nome,r.descricao],aoSelecionar:r=>{const sugerido=r?(produto?r.precoVenda:r.preco):0;$('os-add-price').value=sugerido;$('os-add-price').min=administrador?'0':String(sugerido);$('os-add-info').textContent=r&&produto?`${r.unidadeMedida||'Unidade não informada'} · Estoque físico: ${r.estoque}; empenho: ${r.empenho}; disponível: ${r.saldo}. Inclusão reserva, sem saída física.`:'';}});
+    $('os-add-reference').append(referencia.elemento);$('os-add-quantity').min=produto?'0.001':'1';$('os-add-quantity').step=produto?'0.001':'1';$('os-add-quantity').max=produto?'999999999999.999':'2147483647';$('os-add-quantity').value='1';$('os-add-price').value=0;$('os-add-price').min='0';$('os-add-price').title=administrador?'':'O valor pode ser aumentado, mas não reduzido abaixo do preço cadastrado.';$('os-add-info').textContent='';
   }
   function renderizar(){cabecalho();totais();itens();$('os-add-panel').hidden=somenteConsulta();configurarInclusao();$('os-workspace').hidden=false;}
   async function carregar(){if(ocupado)return;const atual=++geracao;$('os-reload').disabled=true;try{const [os]=await Promise.all([api('/api/ordens-servico/consulta/'+id),catalogos()]);if(atual!==geracao)return;ordem=os;renderizar();}catch(e){erro(e);}finally{$('os-reload').disabled=false;}}
@@ -77,14 +81,14 @@
     if(ocupado)return;ocupado=true;const atual=++geracao;$('os-workspace').querySelectorAll('button,input,select,textarea').forEach(e=>e.disabled=true);
     try{const os=await api(url,options);if(atual!==geracao)return;ordem=os;notice(mensagem);try{await catalogos();}catch(e){erro(e);}renderizar();}
     catch(e){erro(e);}
-    finally{ocupado=false;$('os-workspace').querySelectorAll('button,input,select,textarea').forEach(e=>e.disabled=false);if(ordem&&somenteConsulta()){[cliente,moto,funcionario].forEach(b=>b.desabilitar(true));$('header-data').disabled=$('header-descricao').disabled=true;$('os-items-body').querySelectorAll('input').forEach(e=>e.disabled=true);}}
+    finally{ocupado=false;$('os-workspace').querySelectorAll('button,input,select,textarea').forEach(e=>e.disabled=false);if(ordem&&somenteConsulta()){[cliente,moto,funcionario].forEach(b=>b.desabilitar(true));$('header-data').disabled=$('header-descricao').disabled=$('header-parecer').disabled=true;$('os-items-body').querySelectorAll('input').forEach(e=>e.disabled=true);}}
   }
   async function criarRetrabalho(){
     if(ocupado)return;ocupado=true;$('os-workspace').querySelectorAll('button').forEach(e=>e.disabled=true);
     try{const nova=await api(`/api/ordens-servico/${id}/retrabalho`,{method:'POST'});notice('Retrabalho criado na OS '+nova.id+'.');window.location.assign('/ordens-servico/'+nova.id);}
     catch(e){erro(e);ocupado=false;$('os-workspace').querySelectorAll('button').forEach(e=>e.disabled=false);if(ordem&&somenteConsulta())[cliente,moto,funcionario].forEach(b=>b.desabilitar(true));}
   }
-  $('os-header-form').addEventListener('submit',e=>{e.preventDefault();if(ocupado||somenteConsulta())return;if(!cliente.validar()||!moto.validar()||!funcionario.validar()||!e.target.reportValidity())return;executar('/api/ordens-servico/'+id,{method:'PUT',body:JSON.stringify({clienteId:cliente.valor(),motocicletaId:moto.valor(),funcionarioId:funcionario.valor(),dataAbertura:$('header-data').value,descricao:$('header-descricao').value.trim()})},'Cabeçalho salvo.');});
-  $('os-add-form').addEventListener('submit',e=>{e.preventDefault();if(ocupado||somenteConsulta())return;if(!referencia.validar()||!e.target.reportValidity())return;const tipo=$('os-add-type').value,dados={quantidade:$('os-add-quantity').value};if(tipo==='produtos')dados.produtoId=referencia.valor();else{dados.servicoId=referencia.valor();dados.valorUnitario=$('os-add-price').value;}executar(`/api/ordens-servico/${id}/${tipo}`,{method:'POST',body:JSON.stringify(dados)},tipo==='produtos'?'Produto empenhado na OS.':'Serviço adicionado.');});
+  $('os-header-form').addEventListener('submit',e=>{e.preventDefault();if(ocupado||somenteConsulta())return;if(!cliente.validar()||!moto.validar()||!funcionario.validar()||!e.target.reportValidity())return;executar('/api/ordens-servico/'+id,{method:'PUT',body:JSON.stringify({clienteId:cliente.valor(),motocicletaId:moto.valor(),funcionarioId:funcionario.valor(),dataAbertura:$('header-data').value,descricao:$('header-descricao').value.trim(),parecerTecnico:$('header-parecer').value.trim()})},'Cabeçalho salvo.');});
+  $('os-add-form').addEventListener('submit',e=>{e.preventDefault();if(ocupado||somenteConsulta())return;if(!referencia.validar()||!e.target.reportValidity())return;const tipo=$('os-add-type').value,dados={quantidade:$('os-add-quantity').value};dados.valorUnitario=$('os-add-price').value;if(tipo==='produtos')dados.produtoId=referencia.valor();else dados.servicoId=referencia.valor();executar(`/api/ordens-servico/${id}/${tipo}`,{method:'POST',body:JSON.stringify(dados)},tipo==='produtos'?'Produto empenhado na OS.':'Serviço adicionado.');});
   $('os-add-type').addEventListener('change',configurarInclusao);$('os-reload').addEventListener('click',carregar);carregar();
 })();

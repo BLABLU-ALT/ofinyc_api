@@ -25,7 +25,7 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
 // Chamadas confirmadas no banco: as consultas seguintes verificam dados após commit.
-@SpringBootTest @AutoConfigureMockMvc @WithMockUser(username = "operador-teste")
+@SpringBootTest @AutoConfigureMockMvc @WithMockUser(username = "operador-teste", roles = "ADMINISTRADOR")
 class EstoqueOsIntegrationTest {
     @Autowired MockMvc mvc;
     @Autowired JdbcTemplate jdbc;
@@ -76,7 +76,7 @@ class EstoqueOsIntegrationTest {
         return postJson("/api/estoque/movimentos", "{\"produtoId\":"+p+",\"funcionarioId\":"+funcionario+",\"tipo\":\""+tipo+"\",\"quantidade\":"+q+",\"motivo\":\"Conferência de teste\",\"usuarioAtuante\":\"injetado\"}", esperado);
     }
     private String reservar(long os, long p, String q, int esperado) throws Exception {
-        return postJson("/api/ordens-servico/"+os+"/produtos", "{\"produtoId\":"+p+",\"quantidade\":"+q+",\"valorUnitario\":999}", esperado);
+        return postJson("/api/ordens-servico/"+os+"/produtos", "{\"produtoId\":"+p+",\"quantidade\":"+q+"}", esperado);
     }
     private long item(String json) { return ((Number)JsonPath.read(json, "$.produtos[0].id")).longValue(); }
     private void iniciar(long os) throws Exception {
@@ -101,7 +101,7 @@ class EstoqueOsIntegrationTest {
         saldos(p,"5","0.5");
         assertEquals(1,jdbc.queryForObject("SELECT count(*) FROM movimentacoes_estoque WHERE produto_id=?",Integer.class,p));
         jdbc.update("UPDATE produtos SET preco_venda=20 WHERE id=?",p);
-        json=putJson("/api/ordens-servico/"+os+"/produtos/"+item,"{\"quantidade\":2,\"valorUnitario\":99,\"unidadeMedida\":\"KG\"}",200);
+        json=putJson("/api/ordens-servico/"+os+"/produtos/"+item,"{\"quantidade\":2,\"unidadeMedida\":\"KG\"}",200);
         assertEquals("L",JsonPath.read(json,"$.produtos[0].unidadeMedida"));
         assertEquals(0.02,((Number)JsonPath.read(json,"$.produtos[0].subtotal")).doubleValue()); saldos(p,"5","2");
         putJson("/api/ordens-servico/"+os+"/produtos/"+item,"{\"quantidade\":5}",200); saldos(p,"5","5");
@@ -203,7 +203,7 @@ class EstoqueOsIntegrationTest {
         try {var primeiro=executor.submit(()->{largada.await();return a.call();});var segundo=executor.submit(()->{largada.await();return b.call();});largada.countDown();return List.of(primeiro.get(20,TimeUnit.SECONDS),segundo.get(20,TimeUnit.SECONDS));}
         finally {executor.shutdownNow();assertTrue(executor.awaitTermination(5,TimeUnit.SECONDS));}
     }
-    private boolean tentarReserva(long os,long p) {try {osService.adicionarProduto(os,p,new BigDecimal("3"));return true;}catch(ResponseStatusException e){assertEquals(409,e.getStatusCode().value());return false;}}
+    private boolean tentarReserva(long os,long p) {try {osService.adicionarProduto(os,p,new BigDecimal("3"),null,true);return true;}catch(ResponseStatusException e){assertEquals(409,e.getStatusCode().value());return false;}}
 
     @Test void reservasConcorrentesNaoUltrapassamDisponivel() throws Exception {
         long p=produto("1","UN"),a=ordem(),b=ordem();movimento(p,"ENTRADA","5",201);

@@ -11,6 +11,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.server.ResponseStatusException;
 import org.springframework.transaction.annotation.Transactional;
+import jakarta.servlet.http.HttpServletRequest;
 import java.math.BigDecimal;
 import java.util.Objects;
 import br.com.oficynic.ofinyc_api.repository.ItemProdutoOSRepository;
@@ -30,28 +31,38 @@ public class ProdutoController {
 
     @GetMapping
     @Transactional(readOnly = true, isolation = Isolation.REPEATABLE_READ)
-    public List<Produto> listar() {
+    public List<ProdutoConsulta> listar(HttpServletRequest request) {
         var produtos = repository.findAll(Sort.by(Sort.Direction.DESC, "id"));
         produtos.forEach(p -> p.setEmpenho(repository.quantidadeEmpenhada(p.getId())));
-        return produtos;
+        return produtos.stream().map(p -> consulta(p, request)).toList();
     }
 
     @GetMapping("/{id}")
     @Transactional(readOnly = true, isolation = Isolation.REPEATABLE_READ)
-    public Produto buscar(@PathVariable Long id) {
+    public ProdutoConsulta buscar(@PathVariable Long id, HttpServletRequest request) {
         var produto = repository.findById(id).orElseThrow(() ->
                 new ResponseStatusException(HttpStatus.NOT_FOUND, "Cadastro não encontrado."));
         produto.setEmpenho(repository.quantidadeEmpenhada(id));
-        return produto;
+        return consulta(produto, request);
+    }
+
+    // Dados exibidos nas consultas; o preço de custo só aparece para o administrador.
+    public record ProdutoConsulta(Long id, String codigo, String descricao, BigDecimal precoVenda, BigDecimal precoCusto,
+                                  String unidadeMedida, BigDecimal estoque, BigDecimal empenho, BigDecimal saldo) { }
+
+    private ProdutoConsulta consulta(Produto p, HttpServletRequest request) {
+        BigDecimal custo = request.isUserInRole("ADMINISTRADOR") ? p.getPrecoCusto() : null;
+        return new ProdutoConsulta(p.getId(), p.getCodigo(), p.getDescricao(), p.getPrecoVenda(), custo,
+                p.getUnidadeMedida(), p.getEstoque(), p.getEmpenho(), p.getSaldo());
     }
 
     public record Reserva(Long ordemServicoId, String clienteNome, SituacaoOrdemServico situacao,
                           BigDecimal quantidade, String unidadeMedida) { }
-    public record ConsultaEstoque(Produto produto, List<Reserva> reservas) { }
+    public record ConsultaEstoque(ProdutoConsulta produto, List<Reserva> reservas) { }
     @GetMapping("/{id}/estoque")
     @Transactional(readOnly = true, isolation = Isolation.REPEATABLE_READ)
-    public ConsultaEstoque consultarEstoque(@PathVariable Long id) {
-        var produto = buscar(id);
+    public ConsultaEstoque consultarEstoque(@PathVariable Long id, HttpServletRequest request) {
+        var produto = buscar(id, request);
         var ativas = List.of(SituacaoOrdemServico.ORCAMENTO, SituacaoOrdemServico.EM_ANDAMENTO,
                 SituacaoOrdemServico.RETRABALHO);
         var reservas = itens.findByProdutoIdAndOrdemServicoSituacaoInOrderById(id, ativas).stream().map(item ->
@@ -84,6 +95,7 @@ public class ProdutoController {
         existente.setCodigo(dados.getCodigo());
         existente.setDescricao(dados.getDescricao());
         existente.setPrecoVenda(dados.getPrecoVenda());
+        existente.setPrecoCusto(dados.getPrecoCusto());
         existente.setUnidadeMedida(dados.getUnidadeMedida());
         repository.flush();
         return existente;

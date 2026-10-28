@@ -4,6 +4,7 @@
   <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1">
   <title>OFICYNIC · Cadastros</title>
   <meta name="csrf-token" th:content="${_csrf.token}"><meta name="csrf-header" th:content="${_csrf.headerName}">
+  <meta name="perfil" th:content="${#authorization.expression('hasRole(''ADMINISTRADOR'')') ? 'ADMINISTRADOR' : 'FUNCIONARIO'}">
   <link rel="stylesheet" th:href="@{/css/app.css}">
   <script th:if="${secao == 'motocicletas'}" th:src="@{/js/catalogo-motos.js}" defer></script>
   <script th:src="@{/js/app.js}" defer></script>

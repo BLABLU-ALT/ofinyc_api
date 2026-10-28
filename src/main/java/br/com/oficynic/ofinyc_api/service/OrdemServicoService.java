@@ -100,39 +100,51 @@ public class OrdemServicoService {
         return ordem;
     }
 
-    public OrdemServico atualizar(Long id, String descricao, LocalDate data, Long clienteId, Long motocicletaId, Long funcionarioId) {
+    public OrdemServico atualizar(Long id, String descricao, String parecerTecnico, Long clienteId, Long motocicletaId,
+                                  Long funcionarioId, boolean administrador) {
         var ordem = buscarParaAlterar(id);
         var cliente = buscarCliente(clienteId);
         var moto = motocicletas.findById(motocicletaId).orElseThrow(() -> erro(HttpStatus.NOT_FOUND, "Motocicleta não encontrada."));
         conferirProprietario(cliente, moto);
+        // A orientação do cliente é registrada na abertura; depois, só o administrador corrige.
+        String orientacao = descricao.trim();
+        if (!administrador && !orientacao.equals(ordem.getDescricao())) {
+            throw erro(HttpStatus.FORBIDDEN, "Somente o administrador pode alterar a orientação do cliente.");
+        }
         ordem.setCliente(cliente);
         ordem.setMotocicleta(moto);
         ordem.setFuncionario(buscarFuncionario(funcionarioId));
-        ordem.setDescricao(descricao.trim());
+        ordem.setDescricao(orientacao);
+        ordem.setParecerTecnico(parecerTecnico == null || parecerTecnico.isBlank() ? null : parecerTecnico.trim());
         // Datas são definidas pelo servidor e pelo evento de aprovação.
         repository.flush();
         return ordem;
     }
 
-    public OrdemServico adicionarServico(Long id, Long servicoId, Integer quantidade, BigDecimal valor) {
+    public OrdemServico adicionarServico(Long id, Long servicoId, Integer quantidade, BigDecimal valor, boolean administrador) {
         var ordem = buscarParaAlterar(id);
         conferirVinculos(ordem);
         var servico = servicos.findById(servicoId).orElseThrow(() -> erro(HttpStatus.NOT_FOUND, "Serviço não encontrado."));
+        var valorPraticado = valor == null ? servico.getPreco() : valor;
+        conferirPrecoMinimo(valorPraticado, servico.getPreco(), administrador);
         var item = new ItemServicoOS();
         item.setOrdemServico(ordem);
         item.setServico(servico);
         item.setQuantidade(quantidade);
         // Copia o preço praticado; a OS não usa o preço futuro do catálogo.
-        item.setValorUnitario(valor == null ? servico.getPreco() : valor);
+        item.setValorUnitario(valorPraticado);
         ordem.getItens().add(item);
         repository.flush();
         return ordem;
     }
 
-    public OrdemServico atualizarItem(Long id, Long itemId, Integer quantidade, BigDecimal valor) {
+    public OrdemServico atualizarItem(Long id, Long itemId, Integer quantidade, BigDecimal valor, boolean administrador) {
         var ordem = buscarParaAlterar(id);
         conferirVinculos(ordem);
         var item = buscarItem(ordem, itemId);
+        if (valor.compareTo(item.getValorUnitario()) != 0) {
+            conferirPrecoMinimo(valor, item.getServico().getPreco(), administrador);
+        }
         item.setQuantidade(quantidade);
         item.setValorUnitario(valor);
         repository.flush();
@@ -147,25 +159,41 @@ public class OrdemServicoService {
         return ordem;
     }
 
-    public OrdemServico adicionarProduto(Long id, Long produtoId, BigDecimal quantidade) {
+    public OrdemServico adicionarProduto(Long id, Long produtoId, BigDecimal quantidade, BigDecimal valor, boolean administrador) {
         var ordem = buscarParaAlterar(id); conferirVinculos(ordem);
         var produto = bloquearProduto(produtoId);
         conferirDisponivel(produto, quantidade);
+        // O preço de venda cadastrado é sugerido; o funcionário só pode aumentá-lo.
+        var valorPraticado = valor == null ? produto.getPrecoVenda() : valor;
+        conferirPrecoMinimo(valorPraticado, produto.getPrecoVenda(), administrador);
         var item = new ItemProdutoOS(); item.setOrdemServico(ordem); item.setProduto(produto);
-        item.setQuantidade(quantidade); item.setValorUnitario(produto.getPrecoVenda()); item.setUnidadeMedida(produto.getUnidadeMedida());
+        item.setQuantidade(quantidade); item.setValorUnitario(valorPraticado); item.setUnidadeMedida(produto.getUnidadeMedida());
+        item.setCustoUnitario(produto.getPrecoCusto());
         ordem.getProdutos().add(item);
         // Apenas reserva: a saída física será registrada na finalização.
         repository.flush(); return ordem;
     }
 
-    public OrdemServico atualizarProduto(Long id, Long itemId, BigDecimal quantidade) {
+    public OrdemServico atualizarProduto(Long id, Long itemId, BigDecimal quantidade, BigDecimal valor, boolean administrador) {
         var ordem = buscarParaAlterar(id); conferirVinculos(ordem);
         var item = buscarProdutoDaOrdem(ordem, itemId);
         var produto = bloquearProduto(item.getProduto().getId());
         var aumento = quantidade.subtract(item.getQuantidade());
         if (aumento.signum() > 0) conferirDisponivel(produto, aumento);
-        item.setQuantidade(quantidade); // Conserva preço e unidade praticados.
+        if (valor != null && valor.compareTo(item.getValorUnitario()) != 0) {
+            conferirPrecoMinimo(valor, produto.getPrecoVenda(), administrador);
+            item.setValorUnitario(valor);
+        }
+        item.setQuantidade(quantidade); // Unidade e custo continuam os da inclusão.
         repository.flush(); return ordem;
+    }
+
+    // Regra de preço: o funcionário não pode cobrar menos que o preço definido pelo administrador.
+    private void conferirPrecoMinimo(BigDecimal valor, BigDecimal precoCadastrado, boolean administrador) {
+        if (!administrador && valor.compareTo(precoCadastrado) < 0) {
+            String minimo = precoCadastrado.setScale(2, java.math.RoundingMode.HALF_UP).toPlainString().replace('.', ',');
+            throw erro(HttpStatus.FORBIDDEN, "O valor não pode ser menor que o preço cadastrado (R$ " + minimo + ").");
+        }
     }
 
     public OrdemServico removerProduto(Long id, Long itemId) {

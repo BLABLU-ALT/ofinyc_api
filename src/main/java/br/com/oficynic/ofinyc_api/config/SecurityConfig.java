@@ -4,6 +4,7 @@ import jakarta.servlet.DispatcherType;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.http.HttpMethod;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.core.userdetails.User;
@@ -22,7 +23,7 @@ public class SecurityConfig {
                                   @Value("${APP_PASSWORD}") String senha) {
         var encoder = new BCryptPasswordEncoder();
         return new InMemoryUserDetailsManager(User.withUsername(usuario)
-                .password("{bcrypt}" + encoder.encode(senha)).roles("USER").build());
+                .password("{bcrypt}" + encoder.encode(senha)).roles("ADMINISTRADOR").build());
     }
 
     @Bean
@@ -30,6 +31,9 @@ public class SecurityConfig {
         http.authorizeHttpRequests(auth -> auth
                 .dispatcherTypeMatchers(DispatcherType.ERROR).permitAll()
                 .requestMatchers("/css/**", "/js/**", "/login").permitAll()
+                // Catálogo e preços de venda são definidos pelo administrador.
+                .requestMatchers(HttpMethod.POST, "/api/produtos/**", "/api/servicos/**").hasRole("ADMINISTRADOR")
+                .requestMatchers(HttpMethod.PUT, "/api/produtos/**", "/api/servicos/**").hasRole("ADMINISTRADOR")
                 .anyRequest().authenticated())
             .formLogin(login -> login.loginPage("/login").defaultSuccessUrl("/", true).permitAll())
             .logout(logout -> logout.logoutSuccessUrl("/login?logout"))

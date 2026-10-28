@@ -22,7 +22,7 @@ class MigracoesIntegrationTest {
             long aberta = jdbc.queryForObject("INSERT INTO " + schema + ".ordens_servico(descricao,data_abertura,situacao) VALUES ('Aberta preservada','2026-09-01','ABERTA') RETURNING id", Long.class);
             long finalizada = jdbc.queryForObject("INSERT INTO " + schema + ".ordens_servico(descricao,data_abertura,situacao,data_finalizacao) VALUES ('Finalizada preservada','2026-08-01','FINALIZADA','2026-08-02') RETURNING id", Long.class);
             Flyway flyway = Flyway.configure().dataSource(dataSource).schemas(schema).defaultSchema(schema).load();
-            assertEquals(3, flyway.migrate().migrationsExecuted);
+            assertEquals(4, flyway.migrate().migrationsExecuted);
             assertEquals("ORCAMENTO", jdbc.queryForObject("SELECT situacao FROM " + schema + ".ordens_servico WHERE id=?", String.class, aberta));
             assertEquals("CONCLUIDA", jdbc.queryForObject("SELECT situacao FROM " + schema + ".ordens_servico WHERE id=?", String.class, finalizada));
             assertNull(jdbc.queryForObject("SELECT ordem_origem_id FROM " + schema + ".ordens_servico WHERE id=?", Long.class, aberta));
@@ -51,11 +51,12 @@ class MigracoesIntegrationTest {
             var antesProduto = jdbc.queryForMap("SELECT * FROM " + schema + ".produtos WHERE id=?", produto);
             var antesOs = jdbc.queryForMap("SELECT * FROM " + schema + ".ordens_servico WHERE id=?", os);
             Flyway flyway = Flyway.configure().dataSource(dataSource).schemas(schema).defaultSchema(schema).load();
-            assertEquals(4, flyway.migrate().migrationsExecuted);
+            assertEquals(5, flyway.migrate().migrationsExecuted);
             assertEquals(0, flyway.migrate().migrationsExecuted);
             var depoisProduto = jdbc.queryForMap("SELECT * FROM " + schema + ".produtos WHERE id=?", produto);
             assertNull(depoisProduto.remove("unidade_medida"));
             assertEquals(0, ((java.math.BigDecimal)depoisProduto.remove("estoque")).signum());
+            assertNull(depoisProduto.remove("preco_custo"));
             assertEquals(antesProduto, depoisProduto);
             var depoisOs = jdbc.queryForMap("SELECT * FROM " + schema + ".ordens_servico WHERE id=?", os);
             assertNull(depoisOs.remove("funcionario_id"));
@@ -65,6 +66,7 @@ class MigracoesIntegrationTest {
             assertNull(depoisOs.remove("data_criacao"));
             assertNull(depoisOs.remove("data_aprovacao"));
             assertNull(depoisOs.remove("data_abertura_anterior"));
+            assertNull(depoisOs.remove("parecer_tecnico"));
             assertEquals(antesOs, depoisOs);
             for (String tabela : new String[]{"funcionarios", "itens_produto_os", "movimentacoes_estoque"})
                 assertEquals(0, jdbc.queryForObject("SELECT count(*) FROM " + schema + "." + tabela, Integer.class));
@@ -80,7 +82,7 @@ class MigracoesIntegrationTest {
             long moto = jdbc.queryForObject("INSERT INTO " + schema + ".motocicletas(placa,marca,modelo,ano) VALUES ('OLD1A23','Marca','Modelo',2024) RETURNING id",Long.class);
             long os = jdbc.queryForObject("INSERT INTO " + schema + ".ordens_servico(descricao,data_abertura,motocicleta_id) VALUES ('OS antiga','2026-09-01',?) RETURNING id",Long.class,moto);
             Flyway flyway = Flyway.configure().dataSource(dataSource).schemas(schema).defaultSchema(schema).load();
-            assertEquals(5, flyway.migrate().migrationsExecuted);
+            assertEquals(6, flyway.migrate().migrationsExecuted);
             assertEquals(0,flyway.migrate().migrationsExecuted);
             assertNull(jdbc.queryForObject("SELECT cliente_id FROM " + schema + ".motocicletas WHERE id=?",Long.class,moto));
             assertEquals("ORCAMENTO",jdbc.queryForObject("SELECT situacao FROM " + schema + ".ordens_servico WHERE id=?",String.class,os));
@@ -98,7 +100,7 @@ class MigracoesIntegrationTest {
         try {
             Flyway flyway = Flyway.configure().dataSource(dataSource)
                     .schemas(schema).defaultSchema(schema).load();
-            assertEquals(9, flyway.migrate().migrationsExecuted);
+            assertEquals(10, flyway.migrate().migrationsExecuted);
             assertEquals(0, flyway.migrate().migrationsExecuted);
             assertEquals(0, jdbc.queryForObject("SELECT count(*) FROM " + schema + ".ordens_servico", Integer.class));
         } finally {
@@ -116,7 +118,7 @@ class MigracoesIntegrationTest {
                     + ".clientes(nome, cpf) VALUES ('Cliente preservado', '90000000005') RETURNING id", Long.class);
             Flyway flyway = Flyway.configure().dataSource(dataSource)
                     .schemas(schema).defaultSchema(schema).load();
-            assertEquals(8, flyway.migrate().migrationsExecuted);
+            assertEquals(9, flyway.migrate().migrationsExecuted);
             assertEquals("Cliente preservado", jdbc.queryForObject("SELECT nome FROM " + schema
                     + ".clientes WHERE id = ?", String.class, id));
             assertEquals(0, jdbc.queryForObject("SELECT count(*) FROM " + schema + ".ordens_servico", Integer.class));
@@ -138,7 +140,7 @@ class MigracoesIntegrationTest {
                     + ".ordens_servico(descricao, data_abertura, cliente_id) VALUES ('OS anterior', CURRENT_DATE, ?) RETURNING id",
                     Long.class, cliente);
             Flyway flyway = Flyway.configure().dataSource(dataSource).schemas(schema).defaultSchema(schema).load();
-            assertEquals(7, flyway.migrate().migrationsExecuted);
+            assertEquals(8, flyway.migrate().migrationsExecuted);
             assertEquals(cliente, jdbc.queryForObject("SELECT cliente_id FROM " + schema + ".ordens_servico WHERE id=?", Long.class, ordem));
             assertNull(jdbc.queryForObject("SELECT motocicleta_id FROM " + schema + ".ordens_servico WHERE id=?", Long.class, ordem));
             assertEquals("OS anterior", jdbc.queryForObject("SELECT descricao FROM " + schema + ".ordens_servico WHERE id=?", String.class, ordem));
@@ -162,7 +164,7 @@ class MigracoesIntegrationTest {
                     + ".ordens_servico(descricao,data_abertura,motocicleta_id) "
                     + "VALUES ('OS preservada',CURRENT_DATE,?) RETURNING id", Long.class, moto);
             Flyway flyway = Flyway.configure().dataSource(dataSource).schemas(schema).defaultSchema(schema).load();
-            assertEquals(6, flyway.migrate().migrationsExecuted);
+            assertEquals(7, flyway.migrate().migrationsExecuted);
             assertEquals(0, flyway.migrate().migrationsExecuted);
             var depois = jdbc.queryForMap("SELECT * FROM " + schema + ".motocicletas WHERE id=?", moto);
             assertNull(depois.remove("cliente_id"));
@@ -185,9 +187,9 @@ class MigracoesIntegrationTest {
             long id=jdbc.queryForObject("INSERT INTO "+schema+".ordens_servico(descricao,data_abertura,situacao) VALUES ('Preservada','2020-03-04','ORCAMENTO') RETURNING id",Long.class);
             var antes=jdbc.queryForMap("SELECT * FROM "+schema+".ordens_servico WHERE id=?",id);
             var flyway=Flyway.configure().dataSource(dataSource).schemas(schema).defaultSchema(schema).load();
-            assertEquals(1,flyway.migrate().migrationsExecuted);
+            assertEquals(2,flyway.migrate().migrationsExecuted);
             var depois=jdbc.queryForMap("SELECT * FROM "+schema+".ordens_servico WHERE id=?",id);
-            assertNull(depois.remove("data_criacao"));assertNull(depois.remove("data_aprovacao"));assertNull(depois.remove("data_abertura_anterior"));
+            assertNull(depois.remove("data_criacao"));assertNull(depois.remove("data_aprovacao"));assertNull(depois.remove("data_abertura_anterior"));assertNull(depois.remove("parecer_tecnico"));
             assertEquals(antes,depois);flyway.validate();
         } finally {jdbc.execute("DROP SCHEMA IF EXISTS "+schema+" CASCADE");}
     }

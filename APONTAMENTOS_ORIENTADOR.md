@@ -1,57 +1,98 @@
 # Apontamentos do orientador — OFICYNIC
 
-Tarefa: TAR-2026-10-21-001. Fonte: pedido completo recebido em 21/10/2026.
+Tarefa: TAR-2026-10-21-001. Fonte: pedido completo do usuário (21/10/2026, retomado em 27–28/10/2026).
 
-Status: inspeção realizada; execução por etapas em andamento. Nenhum requisito marcado sem validação.
+Legenda: `[ ]` pendente · `[x]` concluído e validado. Nenhum item é marcado sem implementação e verificação.
 
-- [ ] REQ-01 — Cadastro condicional de cliente e motocicleta (IF)
+## Decisões do usuário
+
+- REQ-01: "IF" significa exibir o cadastro de cliente/moto **somente quando necessário** na abertura da OS; não é um campo novo.
+- Aprovação do cliente inicia o atendimento (ORCAMENTO → EM_ANDAMENTO) e é registrada uma única vez.
+- 28/10/2026: usuários em **herança de tabela única** — `funcionarios` passa a `usuarios` com `tipo` (ADMINISTRADOR/FUNCIONARIO); Java: `Usuario` abstrata com `Administrador` e `Funcionario`.
+- 28/10/2026: a regra de preço mínimo do REQ-11 vale para **produtos e serviços**.
+- A conta técnica atual (APP_USER/APP_PASSWORD) é o administrador.
+
+## Etapa 1 — Cadastro de clientes e formulários
+
+- [ ] REQ-01 — IF no cadastro do cliente ao abrir OS
+  - Implementado: botão "Novo cliente" e "Cadastrar motocicleta" só aparecem quando a busca não encontra registro (`ordens-servico.js`).
+  - Validação: harness DOM anterior PASS; **pendente conferência visual nesta retomada**.
 - [ ] REQ-02 — Botão limpar campos
-- [ ] REQ-03 — Alinhamento dos botões
-- [ ] REQ-04 — Data automática na criação da OS
-- [ ] REQ-05 — Atualização após aprovação do cliente
-- [ ] REQ-06 — Renomear campo
-- [ ] REQ-07 — Criar campo Parecer Técnico
-- [ ] REQ-08 — Permissões de edição
-- [ ] REQ-09 — Validar impacto de alterações de preços
-- [ ] REQ-10 — Preço de custo e preço de venda
-- [ ] REQ-11 — Regras de preços dos funcionários
-- [ ] REQ-12 — Funcionário ativo/inativo
-- [ ] REQ-13 — Ocultar funcionários inativos na abertura da OS
+  - Implementado: "Limpar" no cadastro novo e na abertura de OS; não aparece em edição/consulta e não apaga dados salvos (`app.js`, `ordens-servico.js`).
+  - Validação: harness DOM anterior PASS; **pendente conferência visual**.
+- [ ] REQ-03 — Alinhamento dos botões da OS
+  - Implementado: ações agrupadas e alinhadas (`app.css`). **Pendente conferência visual**.
+
+## Etapa 2 — Datas e aprovação
+
+- [x] REQ-04 — Data automática na criação da OS
+  - Arquivos: `OrdemServicoService`, `OrdemServicoController`, `V9__datas_aprovacao_os.sql`.
+  - Implementado: data do servidor (America/Sao_Paulo); campo somente leitura; edição não altera datas.
+  - Validação: `FluxoOsIntegrationTest` (fuso, edição sem alterar data) — suíte 135/135 em 28/10.
+- [x] REQ-05 — Atualização após aprovação do cliente
+  - Implementado: `POST /api/ordens-servico/{id}/aprovacao` registra `dataAprovacao` uma vez e atualiza `dataAbertura`; `dataCriacao` preserva a criação; OS legadas guardam `dataAberturaAnterior`.
+  - Validação: `FluxoOsIntegrationTest` e `MigracoesIntegrationTest` (aprovação repetida, legado, upgrade V8→V9).
+
+## Etapa 3 — Orientação do cliente e parecer técnico
+
+- [x] REQ-06 — Renomear para "Orientação do cliente"
+  - Arquivos: `ordens-servico.js`, `os-detalhe.js`, `OrdemServicoController` (mensagens). PDF: aplicado no REQ-18.
+- [x] REQ-07 — Campo Parecer técnico
+  - Arquivos: `V10__parecer_tecnico_e_precos.sql` (`ordens_servico.parecer_tecnico`), `OrdemServico`, `OrdemServicoService.atualizar`, `os-detalhe.js`.
+  - Implementado: campo independente (até 1000 caracteres); não sobrescreve a orientação; bloqueado em OS concluída/cancelada.
+  - Validação: `ApontamentosIntegrationTest.funcionarioNaoAlteraOrientacaoMasRegistraParecer` e `parecerNaoMudaDepoisDeConcluir`.
+- [x] REQ-08 — Permissões de edição
+  - Implementado no backend: alteração da orientação por não administrador retorna 403 e não grava; parecer editável por ambos enquanto a OS estiver aberta. Na tela, a orientação fica somente leitura para o funcionário.
+  - Validação: teste acima (funcionário 403 + banco inalterado; administrador altera).
+
+## Etapa 4 — Produtos, preços e histórico financeiro
+
+- [x] REQ-09 — Impacto de alteração de preços
+  - Diagnóstico: itens de produto e serviço já guardavam `valor_unitario` próprio; os totais usam esse valor.
+  - Validação: `alterarPrecoNoCadastroNaoMudaOsAntiga` (produto 100→150 e serviço 80→120 no cadastro; OS mantém 100 + 80 = 180). PDFs/relatórios usam os mesmos valores do item (REQ-18/22).
+- [x] REQ-10 — Preço de custo e preço de venda
+  - Arquivos: `V10` (`produtos.preco_custo`, `itens_produto_os.custo_unitario`), `Produto`, `ItemProdutoOS`, `ProdutoController` (record `ProdutoConsulta`), `SecurityConfig`, `app.js`.
+  - Implementado: cadastro/edição de produtos e serviços só pelo administrador; preço de custo só aparece ao administrador (API devolve nulo ao funcionário); custo copiado no item da OS.
+  - Validação: `precoDeCustoECatalogoSaoDoAdministrador` (403 do funcionário em POST/PUT; custo nulo em lista, detalhe e estoque).
+- [x] REQ-11 — Regras de preço do funcionário
+  - Implementado: preço de venda sugerido; funcionário pode aumentar e recebe 403 ao reduzir (inclusão e edição; produtos e serviços); administrador pode conceder valor menor; valor praticado salvo no item.
+  - Validação: `funcionarioSoPodeAumentarOPrecoCadastrado` (140 aceito, 100/110/80 bloqueados sem gravar, administrador 100 aceito).
+
+## Etapa 5 — Controle de funcionários
+
+- [ ] REQ-12 — Funcionário ativo/inativo — em implementação (V11, `Usuario`).
+- [ ] REQ-13 — Ocultar inativos na abertura da OS
 - [ ] REQ-14 — Controle exclusivo do administrador
+
+## Etapa 6 — Interface, ícones e navegação
+
 - [ ] REQ-15 — Botões somente com ícones
-- [ ] REQ-16 — Organização da navegação
-- [ ] REQ-17 — Visão Geral
+- [ ] REQ-16 — Organização da navegação e aba Relatórios
+- [ ] REQ-17 — Visão Geral com totais de clientes e veículos
+
+## Etapa 7 — PDF da OS
+
 - [ ] REQ-18 — Documento de aprovação
-- [ ] REQ-19 — Criar aba Relatórios
+
+## Etapa 8 — Central de relatórios
+
+- [ ] REQ-19 — Aba Relatórios
 - [ ] REQ-20 — Filtros interativos
-- [ ] REQ-21 — Exportação
+- [ ] REQ-21 — Exportação PDF e Excel
 - [ ] REQ-22 — Relatórios de OS
 - [ ] REQ-23 — Relatório de controle financeiro
 - [ ] REQ-24 — Segurança dos relatórios
 
-## Diagnóstico inicial
+## Testes executados
 
-- REQ-01: resolvido pelo usuário: IF significa mostrar cadastro apenas quando necessário; não é um novo campo. Implementado e coberto por DOM.
-- Cadastro rápido de cliente na OS já existe; preservar seleção e dados salvos ao limpar rascunho.
-- REQ-09: itens já armazenam valorUnitario próprio; falta repetir cenário de preço histórico nesta entrega.
-- Datas hoje vêm do navegador e podem ser alteradas. Não há evento de aprovação nem datas originais separadas.
-- Existe apenas conta técnica ROLE_USER. Perfis administrativos e operacionais precisam ser implementados e testados no servidor nas etapas seguintes.
-- Não há PDF/XLSX reais nem central administrativa de relatórios.
+| Data | Comando | Resultado |
+|---|---|---|
+| 27/10 | `iniciar-local.ps1 -Teste` (linha de base) | 130 testes, 0 falhas |
+| 28/10 | `iniciar-local.ps1 -Teste` (Etapas 3–4) | 135 testes, 0 falhas |
+
+Ajustes em testes existentes: passaram a rodar como `ADMINISTRADOR` (catálogo agora é administrativo); contagens de migração +1 (V10); o teste de reserva deixou de enviar preço injetado, porque o REQ-11 passou a aceitar valor informado.
 
 ## Última atividade e próximo passo
 
-### TAR-2026-10-21-001 — Apontamentos do orientador: andamento
-
-- Data: iniciado em 2026-10-21; registro retomado em 2026-10-27.
-- Pedido: atender os 24 apontamentos, por etapas, preservando dados e simplicidade Java/Spring.
-- Objetivo desta entrega parcial: REQ01–05, cadastro condicional, limpeza segura, alinhamento, datas automáticas e aprovação.
-- Situação: EM_ANDAMENTO; não equivale à conclusão dos 24 requisitos.
-- RF/RNF/RN: fluxo de OS RF06–09/RF11, integridade e histórico RN05–07 e RNF07; impactos acadêmicos sujeitos a atualização futura.
-- Decisões explícitas: IF significa exibir cadastro somente quando necessário; aprovação inicia atendimento; conta atual será administrador e funcionários terão login próprio nas etapas posteriores.
-- Implementado: limpeza apenas de rascunho novo; ações condicionais cliente/moto; alinhamento CSS; data do servidor em America/Sao_Paulo; aprovação única iniciando atendimento; preservação da criação e da abertura anterior legada.
-- Arquivos afetados: templates/cadastros.html; static/js/{app,busca,ordens-servico,os-detalhe}.js; static/css/app.css; OrdemServico, OrdemServicoService, OrdemServicoController; V9__datas_aprovacao_os.sql; FluxoOsIntegrationTest; MigracoesIntegrationTest; harnesses locais.
-- Testes e resultados: relatórios Surefire de 21/10 conferidos em 27/10: 130 testes, zero falhas/erros; execução isolada PostgreSQL 18.1/55434. Incluem concorrência, rollback, upgrade V8, legado, CSRF e fuso. Harnesses DOM previamente PASS; conferência visual em andamento. Não confundir testes isolados com implantação no banco de estudo.
-- Pareceres: PostgreSQL POS APROVADO nesta retomada; negócio/TCC e backend/frontend solicitados novamente. Revisões anteriores foram interrompidas por limite de uso.
-- Impacto no TCC: documentar cadastro condicional, limpeza de rascunho e distinção entre criação, aprovação e abertura operacional; legado sem criação conhecida permanece nulo. Originais acadêmicos não editados. Perfis, parecer técnico, PDF e relatórios ainda não devem ser descritos como implementados.
-- Pendências: validação visual REQ03; pareceres finais restantes; etapas seguintes REQ06–24. Sem commit/push automático.
-Próximo passo exato: finalizar inspeção visual e pareceres REQ01–05; depois implementar REQ06–08 (orientação, parecer e permissões), com perfis autorizados, seguindo a ordem do pedido.
+- Última atividade: Etapas 3 e 4 concluídas e testadas; iniciada a Etapa 5 (V11, `Usuario`, `Administrador`, `Funcionario`, `UsuarioRepository`).
+- Próximo passo: concluir a Etapa 5 (serviços, controller, segurança, tela, testes de login e perfis).
