@@ -4,14 +4,13 @@
   let ordem,clientes=[],motos=[],funcionarios=[],servicos=[],produtos=[],referencia,cliente,moto,funcionario,ocupado=false,geracao=0;
   const estados={ORCAMENTO:'Orçamento',EM_ANDAMENTO:'Em andamento',CONCLUIDA:'Concluída',CANCELADA:'Cancelada',RETRABALHO:'Retrabalho'};
   const somenteConsulta=()=>['CONCLUIDA','CANCELADA'].includes(ordem.situacao);
-  // PDF de aprovação: abre em nova aba e não altera a OS.
   const pdf=document.createElement('a');pdf.className='button';pdf.href='/api/ordens-servico/'+id+'/pdf';pdf.target='_blank';pdf.rel='noopener';
   pdf.title='Gerar PDF para aprovação do cliente';rotular(pdf,'pdf','PDF de aprovação');$('os-status').after(pdf);
   $('page-title').textContent='Ordem de serviço nº '+id;$('breadcrumb').textContent='OS '+id;document.title='OS '+id+' · OFICYNIC';
   function botao(texto,acao,nomeIcone){const b=document.createElement('button');b.type='button';b.className='button';if(nomeIcone)rotular(b,nomeIcone,texto);else b.textContent=texto;b.addEventListener('click',acao);return b;}
   function erro(e){notice(e.mensagem||'Confira os dados e tente novamente.',true);$('notice').scrollIntoView({block:'nearest'});}
   function campo(nome,label,tipo,valor,obrigatorio=true,tamanho=255){const div=document.createElement('div');div.className='form-field'+(tipo==='textarea'?' wide':'');const l=document.createElement('label');l.htmlFor=nome;l.textContent=label+(obrigatorio?' *':'');const input=document.createElement(tipo==='textarea'?'textarea':'input');input.id=nome;input.required=obrigatorio;input.value=valor??'';if(tipo!=='textarea')input.type=tipo;else{input.maxLength=tamanho;input.rows=3;}div.append(l,input);$('os-header-fields').append(div);return input;}
-  async function catalogos(){[clientes,motos,funcionarios,servicos,produtos]=await Promise.all([api('/api/clientes'),api('/api/motocicletas'),api('/api/funcionarios/ativos'),api('/api/servicos'),api('/api/produtos')]);}
+  async function catalogos(){[clientes,motos,funcionarios,servicos,produtos]=await Promise.all([api('/api/clientes'),api('/api/motocicletas'),api('/api/usuarios/ativos'),api('/api/servicos'),api('/api/produtos')]);}
   function cabecalho(){
     $('os-header-fields').replaceChildren();
     const finalizada=somenteConsulta();
@@ -29,7 +28,6 @@
     }
     $('os-header-fields').append(cliente.elemento,moto.elemento,funcionario.elemento);
     campo('header-data','Data de abertura','date',ordem.dataAbertura).readOnly=true;
-    // Orientação do cliente: registrada na abertura; depois, somente o administrador corrige.
     const orientacao=campo('header-descricao','Orientação do cliente','textarea',ordem.descricao);
     if(!administrador){orientacao.readOnly=true;orientacao.title='Somente o administrador pode alterar a orientação do cliente.';}
     campo('header-parecer','Parecer técnico','textarea',ordem.parecerTecnico,false,1000).placeholder='Avaliação, diagnóstico ou observação técnica do atendimento.';
@@ -38,7 +36,7 @@
     $('os-workspace').classList.toggle('somente-consulta',finalizada);
     if(ordem.situacao==='CONCLUIDA')$('os-info').textContent='Concluída em '+ordem.dataFinalizacao.split('-').reverse().join('/')+'. Dados e itens somente para consulta.';
     else if(ordem.situacao==='CANCELADA')$('os-info').textContent='OS cancelada. Os dados foram preservados e os produtos deixaram de ficar empenhados.';
-    else $('os-info').textContent='Produtos ficam empenhados até a conclusão ou o cancelamento. Salve alterações do cabeçalho antes de incluir itens.';
+    else $('os-info').textContent='';
     if(ordem.dataCriacao)$('os-info').textContent+=' Criação: '+ordem.dataCriacao.split('-').reverse().join('/')+'.';
     if(ordem.dataAprovacao)$('os-info').textContent+=' Aprovação: '+ordem.dataAprovacao.split('-').reverse().join('/')+'.';
     if(ordem.dataAberturaAnterior)$('os-info').textContent+=' Abertura anteriormente registrada (legado): '+ordem.dataAberturaAnterior.split('-').reverse().join('/')+'.';
@@ -77,7 +75,7 @@
   }
   function configurarInclusao(){
     const tipo=$('os-add-type').value,produto=tipo==='produtos';$('os-add-reference').replaceChildren();
-    referencia=criarBusca({nome:'add-reference',rotulo:produto?'Produto':'Serviço',registros:()=>produto?produtos:servicos,descricao:r=>r.descricao&&produto?r.descricao:r.nome,codigo:r=>produto?r.codigo:String(r.id),chaves:r=>produto?[r.id,r.codigo,r.descricao]:[r.id,r.nome,r.descricao],aoSelecionar:r=>{const sugerido=r?(produto?r.precoVenda:r.preco):0;$('os-add-price').value=sugerido;$('os-add-price').min=administrador?'0':String(sugerido);$('os-add-info').textContent=r&&produto?`${r.unidadeMedida||'Unidade não informada'} · Estoque físico: ${r.estoque}; empenho: ${r.empenho}; disponível: ${r.saldo}. Inclusão reserva, sem saída física.`:'';}});
+    referencia=criarBusca({nome:'add-reference',rotulo:produto?'Produto':'Serviço',registros:()=>produto?produtos:servicos,descricao:r=>r.descricao&&produto?r.descricao:r.nome,codigo:r=>produto?r.codigo:String(r.id),chaves:r=>produto?[r.id,r.codigo,r.descricao]:[r.id,r.nome,r.descricao],aoSelecionar:r=>{const sugerido=r?(produto?r.precoVenda:r.preco):0;$('os-add-price').value=sugerido;$('os-add-price').min=administrador?'0':String(sugerido);$('os-add-info').textContent=r&&produto?`${r.unidadeMedida||'Unidade não informada'} · Estoque físico: ${r.estoque}; empenho: ${r.empenho}; disponível: ${r.saldo}.`:'';}});
     $('os-add-reference').append(referencia.elemento);$('os-add-quantity').min=produto?'0.001':'1';$('os-add-quantity').step=produto?'0.001':'1';$('os-add-quantity').max=produto?'999999999999.999':'2147483647';$('os-add-quantity').value='1';$('os-add-price').value=0;$('os-add-price').min='0';$('os-add-price').title=administrador?'':'O valor pode ser aumentado, mas não reduzido abaixo do preço cadastrado.';$('os-add-info').textContent='';
   }
   function renderizar(){cabecalho();totais();itens();$('os-add-panel').hidden=somenteConsulta();configurarInclusao();$('os-workspace').hidden=false;}

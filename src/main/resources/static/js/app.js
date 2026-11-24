@@ -1,5 +1,4 @@
 'use strict';
-// Os mesmos componentes de tela atendem aos quatro cadastros.
 const definitions = {
   'ordens-servico': {
     title:'Ordens de serviço', icon:'▤', hint:'Abra e consulte os atendimentos.', api:'/api/ordens-servico/consulta'
@@ -21,7 +20,7 @@ const definitions = {
   }
   ,
   funcionarios: {
-    title:'Funcionários',singular:'funcionário',description:'Responsáveis pelos atendimentos e movimentações.',icon:'◉',hint:'Cadastre os responsáveis.',searchKeys:['nome'],searchPlaceholder:'Pesquisar por nome',defaultSort:'nome:asc',sorts:[['nome:asc','Nome (A–Z)'],['nome:desc','Nome (Z–A)']],columns:[['id','Código'],['nome','Nome'],['login','Login'],['perfil','Perfil','perfil'],['ativo','Situação','ativo']],fields:[['nome','Nome completo','text',true,120,'wide'],
+    recurso:'usuarios', title:'Funcionários',singular:'funcionário',description:'Responsáveis pelos atendimentos e movimentações.',icon:'◉',hint:'Cadastre os responsáveis.',searchKeys:['nome'],searchPlaceholder:'Pesquisar por nome',defaultSort:'nome:asc',sorts:[['nome:asc','Nome (A–Z)'],['nome:desc','Nome (Z–A)']],columns:[['id','Código'],['nome','Nome'],['login','Login'],['perfil','Perfil','perfil'],['ativo','Situação','ativo']],fields:[['nome','Nome completo','text',true,120,'wide'],
     ['perfil','Perfil','select',true,null,'','Definido no cadastro; não muda na edição.',[['FUNCIONARIO','Funcionário'],['ADMINISTRADOR','Administrador']],'FUNCIONARIO'],
     ['ativo','Situação','select',true,null,'','Inativos não entram no sistema nem recebem novas OS.',[['true','Ativo'],['false','Inativo']],'true'],
     ['login','Login de acesso','text',false,60,'','Deixe em branco para quem não acessa o sistema.'],
@@ -34,7 +33,6 @@ const definitions = {
 }
 ;
 const $ = id => document.getElementById(id);
-// Ícones de traço desenhados em SVG, sem biblioteca externa (REQ-15).
 const desenhosIcone = {
   consultar:'<circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16" y2="16"/>',
   editar:'<path d="M4 20h4L19 9l-4-4L4 16z"/><line x1="13" y1="7" x2="17" y2="11"/>',
@@ -51,20 +49,19 @@ const desenhosIcone = {
   aprovar:'<polyline points="5 12 10 17 19 7"/>',
   cancelar:'<circle cx="12" cy="12" r="9"/><line x1="8" y1="8" x2="16" y2="16"/><line x1="16" y1="8" x2="8" y2="16"/>',
   fechar:'<line x1="6" y1="6" x2="18" y2="18"/><line x1="18" y1="6" x2="6" y2="18"/>',
-  retrabalho:'<polyline points="4 4 4 9 9 9"/><path d="M4 9a8 8 0 1 1 1.5 7"/>'
+  retrabalho:'<polyline points="4 4 4 9 9 9"/><path d="M4 9a8 8 0 1 1 1.5 7"/>',
+  ordens:'<rect x="5" y="4" width="14" height="18"/><rect x="9" y="2" width="6" height="4"/><line x1="8" y1="11" x2="16" y2="11"/><line x1="8" y1="15" x2="16" y2="15"/>'
 };
 function icone(nome) {
   const svg=document.createElementNS('http://www.w3.org/2000/svg','svg');
   svg.setAttribute('viewBox','0 0 24 24');svg.setAttribute('aria-hidden','true');svg.classList.add('icone');
   svg.innerHTML=desenhosIcone[nome]||'';return svg;
 }
-// Botão somente com ícone: a dica (title) e o aria-label dizem a ação.
 function botaoIcone(nome,rotulo,acao,classe='row-action') {
   const botao=document.createElement('button');botao.type='button';botao.className=classe+' icon-button';
   botao.title=rotulo;botao.setAttribute('aria-label',rotulo);botao.append(icone(nome));
   if(acao)botao.addEventListener('click',acao);return botao;
 }
-// Põe ícone num botão existente; com somenteIcone, o texto vira dica.
 function decorarBotao(elemento,nome,somenteIcone=false) {
   if(!elemento)return;
   const rotulo=elemento.textContent.trim();
@@ -72,6 +69,29 @@ function decorarBotao(elemento,nome,somenteIcone=false) {
   else elemento.replaceChildren(icone(nome),rotulo);
 }
 function rotular(elemento,nome,texto){elemento.replaceChildren(icone(nome),texto);}
+let linhaSelecionada=null, ultimaAtualizacaoAcoes=null;
+function criarAcaoLista(nomeIcone,rotulo,acao,exigeSelecao=true) {
+  const botao=botaoIcone(nomeIcone,rotulo,acao,'button subtle');botao.dataset.exigeSelecao=String(exigeSelecao);
+  $('list-actions').append(botao);return botao;
+}
+function selecionarLinha(id) {
+  linhaSelecionada=id;
+  document.querySelectorAll('#table-body tr').forEach(tr=>tr.setAttribute('aria-selected',String(tr.dataset.id===String(id))));
+  if(ultimaAtualizacaoAcoes)atualizarAcoesLista(...ultimaAtualizacaoAcoes);
+}
+function linhaSelecionavel(tr,id,aoAbrir) {
+  tr.dataset.id=id;tr.tabIndex=0;tr.classList.add('selectable');tr.setAttribute('aria-selected',String(String(id)===String(linhaSelecionada)));
+  tr.addEventListener('click',()=>selecionarLinha(id));
+  tr.addEventListener('dblclick',()=>{selecionarLinha(id);aoAbrir();});
+  tr.addEventListener('keydown',evento=>{if(evento.key===' '){evento.preventDefault();selecionarLinha(id);}else if(evento.key==='Enter'){selecionarLinha(id);aoAbrir();}});
+}
+function atualizarAcoesLista(idsVisiveis,descricao) {
+  ultimaAtualizacaoAcoes=[idsVisiveis,descricao];
+  if(linhaSelecionada!==null&&!idsVisiveis.some(id=>String(id)===String(linhaSelecionada)))linhaSelecionada=null;
+  const nome=linhaSelecionada===null?'':descricao(linhaSelecionada);
+  $('list-hint').textContent=linhaSelecionada===null?'':'Selecionado: '+nome;
+  $('list-actions').querySelectorAll('button').forEach(botao=>{if(botao.dataset.exigeSelecao==='true')botao.disabled=linhaSelecionada===null;});
+}
 // O perfil só ajusta a tela; as permissões são conferidas no servidor.
 const administrador = document.querySelector('meta[name="perfil"]')?.content === 'ADMINISTRADOR';
 const secoesSoAdministradorAltera = ['produtos','servicos','funcionarios'];
@@ -80,6 +100,8 @@ if(administrador) {
   definitions.produtos.fields.splice(2,0,['precoCusto','Preço de custo (R$)','number',false,null,'','Visível somente ao administrador.']);
 }
 const section = document.body.dataset.secao;
+// Rota da API da seção: o nome da entidade no plural (a tela Funcionários usa /api/usuarios).
+const rotaApi = () => '/api/' + (definitions[section]?.recurso || section);
 const unidadesMedida = [['PC','Peça'],['MT','Metro'],['LT','Litro'],['KG','Quilograma'],['PAR','Par'],['JG','Jogo'],['KT','Kit']];
 const money = new Intl.NumberFormat('pt-BR', {
   style:'currency',currency:'BRL'
@@ -189,7 +211,6 @@ function buildDashboard() {
     }));
   };
   $('dashboard-period').addEventListener('change',renderizar);
-  // Totais de cadastros vêm de consultas count() no banco.
   api('/api/painel/resumo').then(resumo=>{$('metric-clients').textContent=resumo.clientes;$('metric-vehicles').textContent=resumo.motocicletas;})
     .catch(error=>notice(error.mensagem||'Não foi possível carregar os totais de cadastros.',true));
   api('/api/ordens-servico/consulta').then(dados=>{ordensDashboard=dados;$('dashboard-loading').hidden=true;renderizar();}).catch(error=>{
@@ -234,7 +255,7 @@ function addField(field) {
   const err=document.createElement('span');
   err.className='field-error';
   err.id='error-'+name;
-  input.setAttribute('aria-describedby',err.id+(help?' help-'+name:''));
+  input.setAttribute('aria-describedby',err.id);
   wrap.append(labelEl,input);
   if(section==='motocicletas' && ['marca','modelo'].includes(name)) {
     const list=document.createElement('datalist');
@@ -242,13 +263,6 @@ function addField(field) {
     input.setAttribute('list',list.id);
     wrap.append(list);
     if(name==='marca')input.addEventListener('input',atualizarSugestoesMoto);
-  }
-  if(help) {
-    const hint=document.createElement('small');
-    hint.id='help-'+name;
-    hint.className='field-help';
-    hint.textContent=help;
-    wrap.append(hint);
   }
   wrap.append(err);
   $('form-fields').append(wrap);
@@ -318,7 +332,7 @@ async function openForm(record=null, consultar=false) {
   let completo=record;
   if(record) {
     try {
-      completo=await api('/api/'+section+'/'+record.id);
+      completo=await api(rotaApi()+'/'+record.id);
     } catch(error) {
       if(!dialog.open || atual!==aberturaCadastro)return;
       $('form-error').textContent=error.mensagem;
@@ -410,23 +424,11 @@ function renderRows() {
       tr.append(td);
     }
     );
-    const td=document.createElement('td');
-    const actions=document.createElement('div');
-    actions.className='row-actions';
-    const nomeRegistro=record.nome||record.placa||record.chassi||record.codigo;
-    const consult=botaoIcone('consultar','Consultar '+nomeRegistro,()=>openForm(record,true));
-    const edit=botaoIcone('editar','Editar '+nomeRegistro,()=>openForm(record,false));
-    actions.append(consult);
-    if(administrador || !secoesSoAdministradorAltera.includes(section)) actions.append(edit);
-    if(section==='produtos') {
-      const estoque=botaoIcone('estoque','Consultar estoque do produto '+record.codigo,()=>consultarEstoqueProduto(record.id,estoque));
-      actions.prepend(estoque);
-    }
-    td.append(actions);
-    tr.append(td);
+    linhaSelecionavel(tr,record.id,()=>openForm(record,true));
     $('table-body').append(tr);
   }
   );
+  atualizarAcoesLista(exibidos.map(r=>r.id),id=>{const r=records.find(item=>String(item.id)===String(id));return r.nome||r.placa||r.chassi||r.codigo;});
   $('empty-state').hidden=filtered.length>0 || loading || loadFailed;
   const isFiltered=term || filtroEstoque || Object.values(filtrosColuna).some(Boolean);
   $('empty-title').textContent=isFiltered?'Nenhum resultado encontrado':'Seu primeiro cadastro começa aqui';
@@ -442,7 +444,7 @@ async function loadRecords() {
   $('empty-state').hidden=true;
   $('refresh').disabled=true;
   try {
-    records=await api('/api/'+section);
+    records=await api(rotaApi());
     atualizarSugestoesMoto();
   }
   catch(error) {
@@ -493,7 +495,7 @@ async function saveRecord(event) {
   $('clear-record').disabled=true;
   rotular(button,'salvar','Salvando…');
   try {
-    await api('/api/'+section+(editingId?'/'+editingId:''), {
+    await api(rotaApi()+(editingId?'/'+editingId:''), {
       method:editingId?'PUT':'POST',body:JSON.stringify(data)
     }
     );
@@ -529,7 +531,6 @@ async function saveRecord(event) {
     rotular(button,'salvar','Salvar cadastro');
   }
 }
-// Ícones dos botões fixos da página.
 decorarBotao($('refresh'),'atualizar',true);decorarBotao($('cancel-dialog'),'fechar');decorarBotao($('clear-record'),'limpar');
 rotular($('save-record'),'salvar','Salvar cadastro');$('new-record').querySelector('span:not(#new-label)')?.replaceWith(icone('adicionar'));
 decorarBotao($('os-reload'),'atualizar',true);decorarBotao(document.querySelector('.os-toolbar a.button'),'voltar',true);
@@ -562,7 +563,7 @@ else if(definitions[section]?.fields) {
   $('new-label').textContent='Cadastrar '+def.singular;
   if($('new-record').hidden) $('empty-add').remove();
   const tr=document.createElement('tr');
-  [...def.columns,['acoes','Ações']].forEach(([,label])=> {
+  def.columns.forEach(([,label])=> {
     const th=document.createElement('th');
     th.scope='col';
     th.textContent=label;
@@ -587,20 +588,19 @@ else if(definitions[section]?.fields) {
       th.append(input);
       filtros.append(th);
     });
-    const th=document.createElement('th');
-    const limpar=botaoIcone('limpar','Limpar filtros');
-    limpar.addEventListener('click',()=> {
-      filtros.querySelectorAll('input').forEach(input=>input.value='');
-      Object.keys(filtrosColuna).forEach(key=>delete filtrosColuna[key]);
-      $('search').value='';
-      renderRows();
-    });
-    th.append(limpar);
-    filtros.append(th);
     $('table-head').append(filtros);
   }
+  const registroSelecionado=()=>records.find(r=>String(r.id)===String(linhaSelecionada));
+  if(section==='produtos'){const estoque=criarAcaoLista('estoque','Consultar estoque do produto selecionado',()=>consultarEstoqueProduto(registroSelecionado().id,estoque));}
+  if(section==='servicos'){const consulta=criarAcaoLista('ordens','Consultar OS abertas do serviço selecionado',()=>consultarOrdensServico(registroSelecionado().id,consulta));}
+  criarAcaoLista('consultar','Consultar o registro selecionado',()=>openForm(registroSelecionado(),true));
+  if(administrador || !secoesSoAdministradorAltera.includes(section)) criarAcaoLista('editar','Editar o registro selecionado',()=>openForm(registroSelecionado(),false));
+  criarAcaoLista('limpar','Limpar filtros',()=>{
+    document.querySelectorAll('.column-filters input').forEach(input=>input.value='');
+    Object.keys(filtrosColuna).forEach(key=>delete filtrosColuna[key]);
+    $('search').value='';paginaAtual=1;renderRows();
+  },false);
   def.fields.forEach(addField);
-  if(def.note)$('form-description').textContent+=' '+def.note;
   $('new-record').addEventListener('click',()=>openForm());
   $('empty-add')?.addEventListener('click',()=>openForm());
   $('clear-record').addEventListener('click',limparNovoCadastro);

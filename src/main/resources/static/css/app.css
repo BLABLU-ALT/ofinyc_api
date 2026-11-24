@@ -1,4 +1,3 @@
-/* Aparência simples de sistema administrativo. */
 :root {
   font-family: Arial, Helvetica, sans-serif;
   font-size: 15px;
@@ -121,7 +120,16 @@ h2 { margin: 0; font-size: 17px; }
 .column-filters th { padding: 6px; background: #f5f6f8; }
 .column-filters input, .column-filters select { min-width: 92px; font-size: 13px; }
 .column-filters .button { min-width: 0; width: 100%; }
-.list-controls { display: flex; gap: 8px; }
+.list-controls { display: flex; align-items: center; gap: 8px; }
+/* Barra de ações da listagem (ao lado de Atualizar), com ícones maiores. */
+.list-actions { display: flex; align-items: center; gap: 8px; padding-right: 8px; border-right: 1px solid #ccd5de; }
+.list-controls .icon-button { min-width: 48px; min-height: 48px; padding: 10px; }
+.list-controls .icon-button .icone { width: 26px; height: 26px; }
+.list-controls .icon-button:disabled { opacity: .4; cursor: not-allowed; }
+.list-hint { color: #536475; font-size: 13px; white-space: nowrap; max-width: 260px; overflow: hidden; text-overflow: ellipsis; }
+tbody tr.selectable { cursor: pointer; }
+tbody tr.selectable:focus-visible { outline: 2px solid #28618d; outline-offset: -2px; }
+tbody tr[aria-selected="true"], tbody tr[aria-selected="true"]:hover { background: #cfe0f1; box-shadow: inset 4px 0 0 #28618d; }
 input, select { width: 100%; min-height: 32px; padding: 6px 8px; border: 1px solid #9facb9; background: white; color: #253443; }
 input::placeholder { color: #627180; }
 .table-scroll { overflow-x: auto; }
@@ -220,12 +228,10 @@ dialog::backdrop { background: #152c434d; }
 
 
 
-/* Oculta somente os textos decorativos do rodapé. */
 .page-footer, .sidebar-bottom, .login-help, .list-footer > span:last-child {
   display: none;
 }
 
-/* A marca mostra apenas o nome do sistema. */
 .brand-mark, .brand small {
   display: none;
 }
@@ -371,3 +377,10 @@ body[data-secao="ordens-servico"] #form-fields > .refresh-motorcycles { align-se
 #report-body td.numero { text-align: right; }
 @media (max-width: 1050px) { .report-filter-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } .report-summary { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
 @media (max-width: 600px) { .report-filter-grid, .report-summary { grid-template-columns: 1fr; } .report-actions .button { flex: 1 1 140px; } }
+@media (max-width: 600px) { .list-hint { display: none; } .list-actions { padding-right: 4px; } }
+.form-description:empty, #os-info:empty, .field-help:empty, .list-hint:empty { display: none; }
+#stock-unit { background: #cfd6de; color: #1b2733; font-weight: 600; cursor: not-allowed; }
+#stock-workspace th { white-space: normal; }
+#stock-body td { overflow-wrap: normal; }
+#stock-body td:nth-child(1), #stock-body td:nth-child(4), #stock-body td:last-child { white-space: nowrap; }
+#report-pdf:disabled { cursor: not-allowed; }

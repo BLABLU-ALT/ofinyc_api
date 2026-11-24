@@ -8,7 +8,6 @@ function criarBusca({nome, rotulo, registros, descricao, chaves, codigo = r => S
   texto.autocomplete = 'off'; texto.placeholder = 'Código ou descrição';
   const lupa = document.createElement('button'); lupa.type = 'button'; lupa.className = 'lookup-button';
   lupa.textContent = '⌕'; lupa.setAttribute('aria-label', 'Pesquisar ' + rotulo.toLocaleLowerCase('pt-BR'));
-  const ajuda = document.createElement('small'); ajuda.className = 'field-help'; ajuda.textContent = obrigatorio ? 'Digite o código ou nome, ou use a lupa para selecionar.' : 'Opcional. Digite o código ou nome, ou use a lupa para selecionar.';
   const normalizar = v => String(v ?? '').trim().toLocaleLowerCase('pt-BR').normalize('NFD').replace(/[\u0300-\u036f]/g, '');
   let escolhido = null;
   const rotuloRegistro = r => codigo(r) + ' · ' + descricao(r);
@@ -61,7 +60,7 @@ function criarBusca({nome, rotulo, registros, descricao, chaves, codigo = r => S
     janela.addEventListener('close', () => { janela.remove(); if (texto.isConnected && !texto.disabled) texto.focus(); }, {once:true});
     renderizar(); janela.showModal(); pesquisa.focus();
   }
-  lupa.addEventListener('click', abrir); caixa.append(texto, lupa); campo.append(label, caixa, ajuda);
+  lupa.addEventListener('click', abrir); caixa.append(texto, lupa); campo.append(label, caixa);
   return {
     elemento: campo, input: texto,
     selecionarId(id) { selecionar(registros().find(r => String(r.id) === String(id)) || null); },

@@ -8,10 +8,10 @@
 		<version>4.1.1</version>
 		<relativePath/> <!-- lookup parent from repository -->
 	</parent>
-	<groupId>br.com.oficynic</groupId>
-	<artifactId>ofinyc_api</artifactId>
+	<groupId>br.edu.ifsul</groupId>
+	<artifactId>oficynic</artifactId>
 	<version>0.0.1-SNAPSHOT</version>
-	<name>ofinyc_api</name>
+	<name>oficynic</name>
 	<description/>
 	<url/>
 	<licenses>
