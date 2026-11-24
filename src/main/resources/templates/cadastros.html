@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html lang="pt-BR" xmlns:th="http://www.thymeleaf.org">
+<!-- O menu e os painéis administrativos usam o perfil; o servidor também bloqueia o acesso. -->
+<head>
+  <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>OFICYNIC · Cadastros</title>
+  <meta name="csrf-token" th:content="${_csrf.token}"><meta name="csrf-header" th:content="${_csrf.headerName}">
+  <meta name="perfil" th:content="${#authorization.expression('hasRole(''ADMINISTRADOR'')') ? 'ADMINISTRADOR' : 'FUNCIONARIO'}">
+  <link rel="stylesheet" th:href="@{/css/app.css}">
+  <script th:if="${secao == 'motocicletas'}" th:src="@{/js/catalogo-motos.js}" defer></script>
+  <script th:src="@{/js/maiusculas.js}" defer></script>
+  <script th:src="@{/js/app.js}" defer></script>
+  <script th:src="@{/js/busca.js}" defer></script>
+  <script th:src="@{/js/consulta-produto.js}" defer></script>
+  <script th:src="@{/js/consulta-servico.js}" defer></script>
+  <script th:if="${secao == 'ordens-servico'}" th:src="@{/js/ordens-servico.js}" defer></script>
+  <script th:if="${secao == 'os-detalhe'}" th:src="@{/js/os-detalhe.js}" defer></script>
+  <script th:if="${secao == 'estoque'}" th:src="@{/js/estoque.js}" defer></script>
+  <script th:if="${secao == 'relatorios'}" th:src="@{/js/relatorios.js}" defer></script>
+</head>
+<body th:attr="data-secao=${secao},data-ordem-id=${ordemId}">
+<a class="skip" href="#conteudo">Pular para o conteúdo</a>
+<button class="menu-toggle" id="menu-toggle" aria-expanded="false" aria-controls="sidebar" aria-label="Abrir menu">☰</button>
+<aside class="sidebar" id="sidebar">
+  <a class="brand" th:href="@{/}"><span class="brand-mark">O<span>+</span></span><span>OFICYNIC<small>GESTÃO DA OFICINA</small></span></a>
+  <nav aria-label="Menu principal" th:with="admin=${#authorization.expression('hasRole(''ADMINISTRADOR'')')}">
+    <a th:href="@{/}" th:classappend="${secao == 'inicio'} ? 'active'" th:attr="aria-current=${secao == 'inicio' ? 'page' : null}"><span class="nav-icon" aria-hidden="true">⌂</span>Visão geral</a>
+    <div class="nav-divider"></div><div class="nav-label">OPERAÇÃO</div>
+    <a th:href="@{/estoque}" th:classappend="${secao == 'estoque'} ? 'active'" th:attr="aria-current=${secao == 'estoque' ? 'page' : null}"><span class="nav-icon" aria-hidden="true">▦</span>Estoque</a>
+    <a th:href="@{/ordens-servico}" th:classappend="${secao == 'ordens-servico' or secao == 'os-detalhe'} ? 'active'" th:attr="aria-current=${secao == 'ordens-servico' or secao == 'os-detalhe' ? 'page' : null}"><span class="nav-icon" aria-hidden="true">▤</span>Ordens de serviço</a>
+    <div class="nav-divider"></div><div class="nav-label">CADASTROS</div>
+    <a th:href="@{/clientes}" th:classappend="${secao == 'clientes'} ? 'active'" th:attr="aria-current=${secao == 'clientes' ? 'page' : null}"><span class="nav-icon" aria-hidden="true">◉</span>Clientes</a>
+    <a th:href="@{/motocicletas}" th:classappend="${secao == 'motocicletas'} ? 'active'" th:attr="aria-current=${secao == 'motocicletas' ? 'page' : null}"><span class="nav-icon" aria-hidden="true">◇</span>Motocicletas</a>
+    <a th:href="@{/produtos}" th:classappend="${secao == 'produtos'} ? 'active'" th:attr="aria-current=${secao == 'produtos' ? 'page' : null}"><span class="nav-icon" aria-hidden="true">▧</span>Produtos</a>
+    <a th:href="@{/servicos}" th:classappend="${secao == 'servicos'} ? 'active'" th:attr="aria-current=${secao == 'servicos' ? 'page' : null}"><span class="nav-icon" aria-hidden="true">⚒</span>Serviços</a>
+    <th:block th:if="${admin}">
+    <div class="nav-divider"></div><div class="nav-label">ADMINISTRAÇÃO</div>
+    <a th:href="@{/funcionarios}" th:classappend="${secao == 'funcionarios'} ? 'active'" th:attr="aria-current=${secao == 'funcionarios' ? 'page' : null}"><span class="nav-icon" aria-hidden="true">◎</span>Funcionários</a>
+    <a th:href="@{/relatorios}" th:classappend="${secao == 'relatorios'} ? 'active'" th:attr="aria-current=${secao == 'relatorios' ? 'page' : null}"><span class="nav-icon" aria-hidden="true">▥</span>Relatórios</a>
+    </th:block>
+  </nav>
+  <div class="sidebar-bottom"><span class="status-dot"></span> Seu espaço de trabalho<small>OFICYNIC · Versão de estudo</small></div>
+</aside>
+<div class="workspace">
+  <header class="topbar"><span class="breadcrumb">Oficina <span>/</span> <strong id="breadcrumb">Cadastros</strong></span><div class="account"><span class="avatar">O</span><span th:text="${#authentication.name}">Administrador</span><form th:action="@{/logout}" method="post"><button class="logout" type="submit">Sair</button></form></div></header>
+  <main id="conteudo" tabindex="-1">
+    <div id="notice" class="notice" role="status" aria-live="polite" hidden></div>
+    <section class="page-heading"><div><p class="eyebrow" id="eyebrow">SUA OFICINA, ORGANIZADA</p><h1 id="page-title">Visão geral</h1><p class="subtitle" id="page-description">Um lugar para cuidar da base do seu atendimento.</p></div><button id="new-record" class="button primary" hidden><span>＋</span><span id="new-label">Novo cadastro</span></button></section>
+    <section id="dashboard" class="dashboard" hidden aria-label="Painel operacional da oficina">
+      <div class="dashboard-toolbar">
+        <div><strong>Painel operacional</strong><p id="dashboard-period-help">Clientes e veículos: total cadastrado. Ordens: data de abertura e situação atual no período.</p></div>
+        <div class="dashboard-toolbar-actions"><label for="dashboard-period">Período</label><select id="dashboard-period"><option value="all">Todo o período</option><option value="month">Mês atual</option><option value="30">Últimos 30 dias</option><option value="year">Ano atual</option></select><a class="button primary" href="/ordens-servico?nova=1">＋ Nova OS</a></div>
+      </div>
+      <div id="dashboard-loading" class="dashboard-loading" role="status">Carregando dados reais da oficina…</div>
+      <div class="metric-grid" aria-label="Indicadores principais">
+        <article class="metric-card status-register"><span class="metric-icon" aria-hidden="true">◉</span><div><span>Clientes cadastrados</span><strong id="metric-clients">—</strong></div></article>
+        <article class="metric-card status-register"><span class="metric-icon" aria-hidden="true">◇</span><div><span>Veículos cadastrados</span><strong id="metric-vehicles">—</strong></div></article>
+        <article class="metric-card"><span class="metric-icon" aria-hidden="true">▤</span><div><span>Total de OS</span><strong id="metric-total">—</strong></div></article>
+        <article class="metric-card status-budget"><span class="metric-icon" aria-hidden="true">▦</span><div><span>Em orçamento</span><strong id="metric-budget">—</strong></div></article>
+        <article class="metric-card status-progress"><span class="metric-icon" aria-hidden="true">▶</span><div><span>Em andamento</span><strong id="metric-progress">—</strong></div></article>
+        <article class="metric-card status-done"><span class="metric-icon" aria-hidden="true">✓</span><div><span>Concluídas</span><strong id="metric-done">—</strong></div></article>
+        <article class="metric-card status-canceled"><span class="metric-icon" aria-hidden="true">✕</span><div><span>Canceladas</span><strong id="metric-canceled">—</strong></div></article>
+        <article class="metric-card status-rework"><span class="metric-icon" aria-hidden="true">↻</span><div><span>Retrabalhos</span><strong id="metric-rework">—</strong></div></article>
+      </div>
+      <section class="dashboard-panel" aria-labelledby="status-title"><div class="dashboard-section-heading"><div><h2 id="status-title">Situação das ordens de serviço</h2><p id="status-context">Situação atual das OS do período selecionado.</p></div></div><div id="status-chart" class="status-chart"></div></section>
+      <section class="dashboard-panel" aria-labelledby="reports-title" th:if="${#authorization.expression('hasRole(''ADMINISTRADOR'')')}"><div class="dashboard-section-heading"><div><h2 id="reports-title">Relatórios</h2><p>Consultas com filtros e exportação em PDF e Excel (somente administrador).</p></div></div><div class="reports-grid"><a class="report-link" th:href="@{/relatorios(tipo='ordens')}"><span aria-hidden="true">▤</span><div><strong>Ordens de serviço</strong><p>Número, cliente, veículo, abertura, status e valor total.</p></div></a><a class="report-link" th:href="@{/relatorios(tipo='financeiro')}"><span aria-hidden="true">▥</span><div><strong>Controle financeiro</strong><p>Valores orçados, aprovados e concluídos, serviços, produtos e custos registrados.</p></div></a></div></section>
+    </section>
+    <section class="list-panel" id="listing" hidden aria-label="Lista de cadastros">
+      <div class="list-toolbar"><div class="search-wrap"><span aria-hidden="true">⌕</span><label class="sr-only" for="search">Buscar cadastros</label><input type="search" id="search" placeholder="Buscar cadastros…" autocomplete="off"></div><div class="list-controls"><span id="list-hint" class="list-hint" aria-live="polite"></span><div id="list-actions" class="list-actions" role="toolbar" aria-label="Ações do registro selecionado"></div><button type="button" class="button subtle" id="refresh">Atualizar</button></div></div>
+      <div id="list-filters" class="list-filter-bar" hidden></div>
+      <div class="table-scroll"><table><thead id="table-head"></thead><tbody id="table-body"></tbody></table></div>
+      <div class="empty-state" id="empty-state" hidden><span class="empty-symbol" aria-hidden="true">＋</span><h2 id="empty-title">Seu primeiro cadastro começa aqui</h2><p id="empty-description">Adicione um registro para começar a organizar sua oficina.</p><button class="button primary" id="empty-add" type="button">Criar primeiro cadastro</button></div>
+      <div id="loading" class="loading" role="status">Carregando cadastros…</div>
+      <footer class="list-footer"><span id="record-count">Aguardando dados</span><div id="pagination" class="pagination" hidden><label for="page-size">Por página</label><select id="page-size"><option value="10">10</option><option value="25">25</option><option value="0">Todos</option></select><button id="page-prev" class="row-action" type="button">← Anterior</button><span id="page-status" aria-live="polite"></span><button id="page-next" class="row-action" type="button">Próxima →</button></div><span>OFICYNIC</span></footer>
+    </section>
+    <section id="os-workspace" th:if="${secao == 'os-detalhe'}" hidden aria-label="Dados e itens da ordem de serviço">
+      <div class="os-toolbar"><a class="button" th:href="@{/ordens-servico}">← Lista de OS</a><span id="os-status" class="status-label"></span><button class="button" id="os-reload" type="button">Atualizar</button></div>
+      <section class="os-panel" aria-labelledby="os-header-title"><h2 id="os-header-title">Cabeçalho da OS</h2><p id="os-info" role="status"></p><form id="os-header-form" novalidate><div id="os-header-fields" class="os-header-grid"></div><div class="os-toolbar"><button id="os-save-header" class="button primary" type="submit">Salvar cabeçalho</button><div id="os-state-actions" class="os-toolbar"></div></div></form></section>
+      <section id="os-totals" class="os-totals" aria-label="Totais da OS"></section>
+      <section class="os-panel" aria-labelledby="os-items-title"><h2 id="os-items-title">Itens da OS</h2><div class="table-scroll"><table><thead><tr><th scope="col">Item</th><th scope="col">Tipo</th><th scope="col">Código</th><th scope="col">Descrição</th><th scope="col">Quantidade</th><th scope="col">Unidade</th><th scope="col">Valor unitário</th><th scope="col">Subtotal</th><th scope="col">Ações</th></tr></thead><tbody id="os-items-body"></tbody></table></div><p id="os-items-empty" hidden>Nenhum item adicionado.</p></section>
+      <section id="os-add-panel" class="os-panel" aria-labelledby="os-add-title"><h2 id="os-add-title">Adicionar item</h2><form id="os-add-form" class="os-add-grid" novalidate><div class="form-field"><label for="os-add-type">Tipo</label><select id="os-add-type"><option value="servicos">Serviço</option><option value="produtos">Produto</option></select></div><div id="os-add-reference"></div><div class="form-field"><label for="os-add-quantity">Quantidade *</label><input id="os-add-quantity" type="number" min="1" step="1" value="1" required></div><div class="form-field"><label for="os-add-price">Valor unitário (R$) *</label><input id="os-add-price" type="number" min="0" max="999999999999.99" step="0.01" value="0" required></div><button id="os-add-button" class="button primary" type="submit">Adicionar item</button></form><p id="os-add-info" role="status"></p></section>
+    </section>
+    <section id="stock-workspace" th:if="${secao == 'estoque'}" hidden>
+      <section class="os-panel"><h2>Registrar movimentação</h2><form id="stock-form" novalidate><div id="stock-fields" class="os-header-grid"></div><div class="os-toolbar"><button id="stock-save" class="button primary" type="submit">Registrar movimentação</button><button id="stock-reload" class="button" type="button">Atualizar histórico</button></div></form></section>
+      <section class="os-panel"><h2>Histórico de estoque</h2><div class="table-scroll"><table><thead><tr><th scope="col">Nº</th><th scope="col">Data</th><th scope="col">Produto</th><th scope="col">Tipo</th><th scope="col">Quantidade</th><th scope="col">Unidade</th><th scope="col" th:if="${#authorization.expression('hasRole(''ADMINISTRADOR'')')}">Valor de compra</th><th scope="col">Responsável</th><th scope="col">Usuário</th><th scope="col">Motivo</th><th scope="col">OS</th></tr></thead><tbody id="stock-body"></tbody></table></div><p id="stock-empty" hidden>Nenhuma movimentação registrada.</p></section>
+    </section>
+    <section id="reports-workspace" th:if="${secao == 'relatorios'}" hidden aria-label="Central de relatórios">
+      <section class="os-panel" aria-labelledby="report-filter-title">
+        <div class="report-tabs" role="group" aria-label="Tipo de relatório">
+          <button type="button" class="button" data-tipo="ordens" aria-pressed="true">Ordens de serviço</button>
+          <button type="button" class="button" data-tipo="financeiro" aria-pressed="false">Controle financeiro</button>
+        </div>
+        <h2 id="report-filter-title">Filtros</h2>
+        <form id="report-filters" class="report-filter-grid" novalidate>
+          <div id="report-cliente-campo" class="report-cliente-campo"></div>
+          <div class="form-field"><label for="report-numero">Número da OS</label><input id="report-numero" type="number" min="1" step="1" placeholder="Todas"></div>
+          <div class="form-field"><label for="report-situacao">Status</label><select id="report-situacao"><option value="">Todos</option><option value="ORCAMENTO">Orçamento</option><option value="EM_ANDAMENTO">Em andamento</option><option value="CONCLUIDA">Concluída</option><option value="CANCELADA">Cancelada</option><option value="RETRABALHO">Retrabalho</option></select></div>
+          <div class="form-field"><label for="report-inicio">Abertura a partir de</label><input id="report-inicio" type="date"></div>
+          <div class="form-field"><label for="report-fim">Abertura até</label><input id="report-fim" type="date"></div>
+          <div class="os-toolbar report-actions">
+            <button id="report-search" class="button primary" type="submit">Pesquisar</button>
+            <button id="report-clear" class="button" type="button">Limpar filtros</button>
+            <button id="report-pdf" class="button" type="button" disabled title="Exportação em PDF indisponível nesta versão. Use Exportar Excel.">Exportar PDF</button>
+            <button id="report-excel" class="button" type="button">Exportar Excel</button>
+          </div>
+        </form>
+        <p id="report-info" role="status"></p>
+      </section>
+      <section id="report-summary" class="report-summary" aria-label="Resumo financeiro" hidden></section>
+      <section class="os-panel" aria-labelledby="report-title">
+        <h2 id="report-title">Resultado</h2>
+        <div class="table-scroll"><table><thead id="report-head"></thead><tbody id="report-body"></tbody></table></div>
+        <p id="report-empty" hidden>Nenhum registro encontrado para os filtros informados.</p>
+        <p id="report-note" class="field-help"></p>
+      </section>
+    </section>
+    <footer class="page-footer">Feito para o dia a dia da sua oficina.<span>Cadastros · OFICYNIC</span></footer>
+    <noscript><p class="notice error">Ative o JavaScript para consultar e salvar os cadastros.</p></noscript>
+  </main>
+</div>
+<dialog id="record-dialog" aria-labelledby="form-title"><form id="record-form" novalidate><div class="dialog-header"><div><p class="eyebrow">CADASTRO</p><h2 id="form-title">Novo cadastro</h2></div><button type="button" class="close-button" id="close-dialog" aria-label="Fechar formulário">×</button></div><div class="dialog-body"><p id="form-description" class="form-description"></p><div id="form-error" class="notice error" role="alert" hidden></div><div class="form-grid" id="form-fields"></div></div><div class="dialog-footer"><button type="button" class="button secondary" id="cancel-dialog">Cancelar</button><button type="button" class="button secondary" id="clear-record" hidden>Limpar</button><button type="submit" class="button primary" id="save-record">Salvar cadastro</button></div></form></dialog>
+
+</body></html>
