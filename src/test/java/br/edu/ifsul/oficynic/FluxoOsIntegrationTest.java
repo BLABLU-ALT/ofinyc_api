@@ -25,7 +25,7 @@ import static org.springframework.security.test.web.servlet.request.SecurityMock
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
-// Cada chamada confirma no PostgreSQL; a consulta posterior não depende da transação do teste.
+// Cada chamada confirma no PostgreSQL e a consulta nao depende da transacao do teste
 @SpringBootTest
 @AutoConfigureMockMvc
 @WithMockUser(roles = "ADMINISTRADOR")
@@ -150,7 +150,7 @@ class FluxoOsIntegrationTest {
         mvc.perform(put("/api/motocicletas/"+motos.get(0)).with(csrf()).contentType(MediaType.APPLICATION_JSON)
                 .content("{\"clienteId\":"+outro+",\"placa\":\"TST1A23\",\"marca\":\"M\",\"modelo\":\"M\",\"ano\":2024}")).andExpect(status().isConflict());
         assertEquals(clientes.get(0),jdbc.queryForObject("SELECT cliente_id FROM motocicletas WHERE id=?",Long.class,motos.get(0)));
-        // Ordem antiga sem responsável (permitido no banco): consulta normal, mas nenhuma alteração até escolher um responsável.
+        // OS antiga sem responsavel consulta normal mas nao altera ate escolher um
         long antiga=jdbc.queryForObject("INSERT INTO ordens_servico(descricao,data_abertura,cliente_id,motocicleta_id) VALUES ('Legado','2026-10-01',?,?) RETURNING id",
                 Long.class,clientes.get(0),motos.get(0)); ordens.add(antiga);
         incluir(antiga,servico,"\"quantidade\":1",409);

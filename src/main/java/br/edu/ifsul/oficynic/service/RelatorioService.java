@@ -91,7 +91,7 @@ public class RelatorioService {
             ResumoFinanceiro resumo) {
     }
 
-    // O período é filtrado pela data de abertura da OS; todos os filtros são opcionais.
+    // Periodo pela data de abertura e todos os filtros opcionais
     public List<OrdemServico> filtrar(Filtro filtro) {
         if (filtro.inicio() != null && filtro.fim() != null && filtro.inicio().isAfter(filtro.fim())) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
@@ -177,7 +177,7 @@ public class RelatorioService {
                     custo,
                     margem));
 
-            // A OS cancelada aparece na lista, mas fica fora dos totais.
+            // OS cancelada aparece na lista mas fica fora dos totais
             if (os.getSituacao() == SituacaoOrdemServico.CANCELADA) {
                 cancelado = cancelado.add(os.calcularValorTotal());
                 continue;
@@ -208,7 +208,7 @@ public class RelatorioService {
             }
         }
 
-        // Custo e margem só são calculados quando todos os produtos concluídos têm custo registrado.
+        // Custo e margem so quando todos os produtos concluidos tem custo
         BigDecimal custoFinal = semCusto == 0 ? custoConcluidas.setScale(2, RoundingMode.HALF_UP) : null;
         BigDecimal margemFinal = custoFinal == null ? null : produtosConcluidas.subtract(custoFinal);
 
@@ -273,7 +273,7 @@ public class RelatorioService {
         };
     }
 
-    // Devolve nulo se algum produto da OS não tem custo registrado.
+    // Nulo se algum produto da OS nao tem custo
     private BigDecimal custoProdutos(OrdemServico os) {
         BigDecimal total = BigDecimal.ZERO;
 

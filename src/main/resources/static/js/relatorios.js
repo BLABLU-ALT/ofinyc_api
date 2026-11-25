@@ -58,7 +58,7 @@
   document.querySelectorAll('.report-tabs .button').forEach(b=>b.addEventListener('click',()=>selecionar(b.dataset.tipo)));
   $('report-filters').addEventListener('submit',e=>{e.preventDefault();pesquisar();});
   $('report-clear').addEventListener('click',()=>{$('report-filters').reset();cliente.limpar();pesquisar();});
-  // O botão Exportar PDF fica na tela, desativado: nesta versão os relatórios são exportados somente em Excel.
+  // Botao Exportar PDF fica desativado porque nesta versao so exporta Excel
   $('report-excel').addEventListener('click',()=>exportar('excel'));
   api('/api/clientes').then(lista=>{clientes=lista.sort((a,b)=>a.nome.localeCompare(b.nome,'pt-BR'));})
     .catch(e=>notice(e.mensagem||'Não foi possível carregar os clientes.',true));

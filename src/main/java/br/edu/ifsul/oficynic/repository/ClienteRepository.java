@@ -13,7 +13,7 @@ public interface ClienteRepository
 
     boolean existsByCpfAndIdNot(String cpf, Long id);
 
-    // Compara só os números, para "(51) 99999-0000" e "51999990000" serem o mesmo telefone.
+    // Compara so os numeros do telefone
     @Query(value = "SELECT EXISTS (SELECT 1 FROM clientes WHERE "
             + "regexp_replace(telefone, '[^0-9]', '', 'g') = :telefone "
             + "AND (CAST(:id AS bigint) IS NULL OR id <> :id))", nativeQuery = true)

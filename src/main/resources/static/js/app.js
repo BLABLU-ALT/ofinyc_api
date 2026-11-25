@@ -92,7 +92,7 @@ function atualizarAcoesLista(idsVisiveis,descricao) {
   $('list-hint').textContent=linhaSelecionada===null?'':'Selecionado: '+nome;
   $('list-actions').querySelectorAll('button').forEach(botao=>{if(botao.dataset.exigeSelecao==='true')botao.disabled=linhaSelecionada===null;});
 }
-// O perfil só ajusta a tela; as permissões são conferidas no servidor.
+// Perfil so ajusta a tela e as permissoes ficam no servidor
 const administrador = document.querySelector('meta[name="perfil"]')?.content === 'ADMINISTRADOR';
 const secoesSoAdministradorAltera = ['produtos','servicos','funcionarios'];
 if(administrador) {
@@ -100,7 +100,7 @@ if(administrador) {
   definitions.produtos.fields.splice(2,0,['precoCusto','Preço de custo (R$)','number',false,null,'','Visível somente ao administrador.']);
 }
 const section = document.body.dataset.secao;
-// Rota da API da seção: o nome da entidade no plural (a tela Funcionários usa /api/usuarios).
+// Rota da API da secao no plural e Funcionarios usa /api/usuarios
 const rotaApi = () => '/api/' + (definitions[section]?.recurso || section);
 const unidadesMedida = [['PC','Peça'],['MT','Metro'],['LT','Litro'],['KG','Quilograma'],['PAR','Par'],['JG','Jogo'],['KT','Kit']];
 const money = new Intl.NumberFormat('pt-BR', {

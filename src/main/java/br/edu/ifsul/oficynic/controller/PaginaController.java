@@ -68,7 +68,7 @@ public class PaginaController {
         return pagina(model, "relatorios");
     }
 
-    // Todas as telas usam o mesmo template; a seção escolhe o que o JavaScript monta.
+    // Todas as telas usam o mesmo template e a secao define o que o JavaScript monta
     private String pagina(Model model, String secao) {
         model.addAttribute("secao", secao);
 

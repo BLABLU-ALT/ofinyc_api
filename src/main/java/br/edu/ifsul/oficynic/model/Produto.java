@@ -63,7 +63,7 @@ public class Produto {
     @Column(nullable = false, precision = 15, scale = 3)
     private BigDecimal estoque = new BigDecimal("0.000");
 
-    // O empenho não é gravado: é a soma dos produtos em OS ainda abertas.
+    // Empenho nao gravado vem da soma dos produtos em OS abertas
     @Transient
     @JsonProperty(access = JsonProperty.Access.READ_ONLY)
     private BigDecimal empenho = new BigDecimal("0.000");

@@ -101,12 +101,12 @@ class AberturaOrdemIntegrationTest {
         long moto = moto(cliente());
         mvc.perform(post("/api/ordens-servico").with(csrf()).contentType(MediaType.APPLICATION_JSON)
                 .content("{\"descricao\":\"Sem vínculos\"}")).andExpect(status().isNotFound());
-        // V13: cliente e motocicleta são obrigatórios na tabela; o responsável continua opcional (retrabalho).
+        // V13 cliente e moto obrigatorios e responsavel opcional por causa do retrabalho
         for (String coluna : new String[]{"cliente_id", "motocicleta_id", "funcionario_id"})
             assertEquals(coluna.equals("funcionario_id") ? "YES" : "NO", jdbc.queryForObject(
                     "SELECT is_nullable FROM information_schema.columns WHERE table_schema = current_schema() "
                     + "AND table_name = 'ordens_servico' AND column_name = ?", String.class, coluna));
-        // Mesmo gravando direto no banco, a OS não fica sem cliente.
+        // Nem gravando direto no banco a OS fica sem cliente
         assertThrows(DataIntegrityViolationException.class, () -> jdbc.update(
                 "INSERT INTO ordens_servico(descricao,data_abertura,motocicleta_id) VALUES ('Sem cliente',CURRENT_DATE,?)", moto));
     }

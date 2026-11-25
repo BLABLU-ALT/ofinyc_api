@@ -1,6 +1,6 @@
 'use strict';
-// Sugestões iniciais dos catálogos brasileiros, consultados em 29/09/2026.
-// Não é uma lista completa: o formulário também aceita nomes digitados.
+// Sugestoes iniciais dos catalogos brasileiros consultados em 29/09/2026
+// Lista incompleta e o formulario aceita nomes digitados
 const catalogoMotos = {
   // https://www.honda.com.br/motos/street/city
   Honda: ['CG 160 Start', 'CG 160 Fan', 'CG 160 Titan', 'CG 160 Cargo', 'Biz 125', 'Pop 110i ES', 'NXR 160 Bros'],

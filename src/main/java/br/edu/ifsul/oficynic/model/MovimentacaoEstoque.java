@@ -59,7 +59,7 @@ public class MovimentacaoEstoque {
     @Column(name = "usuario_atuante", nullable = false, length = 255)
     private String usuarioAtuante;
 
-    // Valor de compra informado na entrada; nulo nas saídas.
+    // Valor de compra da entrada e nulo nas saidas
     @Column(name = "valor_unitario", precision = 14, scale = 2)
     private BigDecimal valorUnitario;
 }

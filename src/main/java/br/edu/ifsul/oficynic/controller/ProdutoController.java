@@ -169,7 +169,7 @@ public class ProdutoController {
         return produto;
     }
 
-    // O preço de custo só aparece para o administrador.
+    // Preco de custo so aparece para o administrador
     private ProdutoConsulta consulta(Produto produto, HttpServletRequest request) {
         BigDecimal custo = request.isUserInRole("ADMINISTRADOR") ? produto.getPrecoCusto() : null;
 

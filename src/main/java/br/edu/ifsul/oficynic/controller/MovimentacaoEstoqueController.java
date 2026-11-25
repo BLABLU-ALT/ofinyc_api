@@ -103,7 +103,7 @@ public class MovimentacaoEstoqueController {
         return consulta(movimento, request);
     }
 
-    // O valor de compra só aparece para o administrador.
+    // Valor de compra so aparece para o administrador
     private Consulta consulta(MovimentacaoEstoque movimento, HttpServletRequest request) {
         return new Consulta(
                 movimento.getId(),

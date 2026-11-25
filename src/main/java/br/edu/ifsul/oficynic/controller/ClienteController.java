@@ -102,7 +102,7 @@ public class ClienteController {
         return repository.saveAndFlush(cliente);
     }
 
-    // Trava a tabela até o fim da transação para dois cadastros iguais não passarem ao mesmo tempo.
+    // Trava a tabela ate o fim da transacao para evitar cadastro duplicado
     private void bloquearGravacao() {
         jdbcTemplate.execute("LOCK TABLE clientes IN SHARE ROW EXCLUSIVE MODE");
     }

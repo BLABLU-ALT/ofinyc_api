@@ -24,7 +24,7 @@ import static org.springframework.security.test.web.servlet.request.SecurityMock
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
-// Chamadas confirmadas no banco: as consultas seguintes verificam dados após commit.
+// Chamadas confirmadas no banco e consultas seguintes leem apos o commit
 @SpringBootTest @AutoConfigureMockMvc @WithMockUser(username = "operador-teste", roles = "ADMINISTRADOR")
 class EstoqueOsIntegrationTest {
     @Autowired MockMvc mvc;
@@ -97,7 +97,7 @@ class EstoqueOsIntegrationTest {
         long p=produto("0.01"," l "), os=ordem(); movimento(p,"ENTRADA","5",201);
         String json=reservar(os,p,"0.5",201); long item=item(json);
         assertEquals(0.01, ((Number)JsonPath.read(json,"$.produtos[0].valorUnitario")).doubleValue());
-        assertEquals(0.01, ((Number)JsonPath.read(json,"$.totalProdutos")).doubleValue()); // 0,005 → 0,01 por linha.
+        assertEquals(0.01, ((Number)JsonPath.read(json,"$.totalProdutos")).doubleValue()); // meio centavo arredonda para um centavo por linha
         saldos(p,"5","0.5");
         assertEquals(1,jdbc.queryForObject("SELECT count(*) FROM movimentacoes_estoque WHERE produto_id=?",Integer.class,p));
         jdbc.update("UPDATE produtos SET preco_venda=20 WHERE id=?",p);
@@ -155,7 +155,7 @@ class EstoqueOsIntegrationTest {
         long p=produto("2","UN"), os=ordem(), outra=ordem(); movimento(p,"ENTRADA","5",201);long i=item(reservar(os,p,"1",201));
         putJson("/api/ordens-servico/"+outra+"/produtos/"+i,"{\"quantidade\":2}",404);
         mvc.perform(delete("/api/ordens-servico/"+outra+"/produtos/"+i).with(csrf())).andExpect(status().isNotFound());
-        putJson("/api/ordens-servico/"+os+"/situacao","{\"situacao\":\"EM_ANDAMENTO\"}",200);postJson("/api/ordens-servico/"+os+"/finalizacao","",409); // Produto sem serviço não muda decisão anterior.
+        putJson("/api/ordens-servico/"+os+"/situacao","{\"situacao\":\"EM_ANDAMENTO\"}",200);postJson("/api/ordens-servico/"+os+"/finalizacao","",409); // Produto sem servico nao muda a decisao anterior
         iniciar(os);postJson("/api/ordens-servico/"+os+"/finalizacao","",200);
         putJson("/api/ordens-servico/"+os+"/produtos/"+i,"{\"quantidade\":2}",409);reservar(os,p,"1",409);
         mvc.perform(delete("/api/ordens-servico/"+os+"/produtos/"+i).with(csrf())).andExpect(status().isConflict());saldos(p,"4","0");
@@ -169,7 +169,7 @@ class EstoqueOsIntegrationTest {
         mvc.perform(get("/api/produtos/"+antigo)).andExpect(jsonPath("$.unidadeMedida").isEmpty());movimento(antigo,"ENTRADA","1",409);
     }
 
-    // Login exige senha; o perfil é fixado no cadastro e a senha nunca sai na resposta (REQ-14).
+    // Login exige senha e perfil fixo no cadastro e a senha fica fora da resposta REQ-14
     @Test void contratosProtegidosEPerfilFixadoNoCadastro() throws Exception {
         long p=produto("1","UN"), os=ordem();
         for(String url:List.of("/api/usuarios","/api/movimentacoes-estoque","/api/produtos/"+p+"/estoque"))

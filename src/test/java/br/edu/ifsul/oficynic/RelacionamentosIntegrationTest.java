@@ -18,7 +18,7 @@ import static org.springframework.security.test.web.servlet.request.SecurityMock
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
-// Sem transação no teste: cada requisição lê o que foi realmente salvo no banco.
+// Sem transacao no teste cada requisicao le o que foi salvo no banco
 @SpringBootTest
 @AutoConfigureMockMvc
 class RelacionamentosIntegrationTest {
@@ -67,7 +67,7 @@ class RelacionamentosIntegrationTest {
                 + ",\"funcionarioId\":" + funcionario() + "}";
     }
 
-    // A OS é aberta pela rota usada na tela, já ligada ao cliente e à motocicleta dele.
+    // OS aberta pela rota da tela ja ligada ao cliente e a moto dele
     private long ordem(long cliente, long moto) throws Exception {
         String json = mvc.perform(post("/api/ordens-servico/abertura").with(csrf())
                 .contentType(MediaType.APPLICATION_JSON).content(dados(cliente, moto)))

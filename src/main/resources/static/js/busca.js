@@ -1,5 +1,5 @@
 'use strict';
-// Referências pesquisáveis: o texto digitado nunca é tratado como um ID confirmado.
+// Texto digitado nunca vira ID confirmado
 function criarBusca({nome, rotulo, registros, descricao, chaves, codigo = r => String(r.id), aoSelecionar = () => {}, obrigatorio = true}) {
   const campo = document.createElement('div'); campo.className = 'form-field';
   const label = document.createElement('label'); label.htmlFor = nome; label.textContent = rotulo + (obrigatorio ? ' *' : '');

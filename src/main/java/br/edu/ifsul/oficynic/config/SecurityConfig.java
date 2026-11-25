@@ -29,8 +29,8 @@ public class SecurityConfig {
         return PasswordEncoderFactories.createDelegatingPasswordEncoder();
     }
 
-    // A conta técnica (APP_USER/APP_PASSWORD) é o administrador inicial;
-    // os demais usuários vêm da tabela usuarios e, se inativos, não entram.
+    // Conta tecnica APP_USER vira o administrador inicial
+    // Demais usuarios vem da tabela usuarios e inativos nao entram
     @Bean
     UserDetailsService usuarios(
             UsuarioRepository repository,

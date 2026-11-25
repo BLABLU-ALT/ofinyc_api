@@ -43,7 +43,7 @@ public class PdfService {
     private static final Font DESTAQUE = FontFactory.getFont(FontFactory.HELVETICA_BOLD, 11);
     private static final Color FUNDO = new Color(228, 234, 240);
 
-    // Apenas gera o documento para o cliente assinar; a aprovação é registrada em outra rota.
+    // So gera o documento e a aprovacao fica em outra rota
     public byte[] gerarAprovacaoOs(OrdemServico os) {
         var saida = new ByteArrayOutputStream();
         var documento = new Document(PageSize.A4, 36, 36, 32, 32);

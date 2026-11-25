@@ -73,7 +73,7 @@ public class EstoqueService {
 
         MovimentacaoEstoque movimento = registrar(produto, funcionario, null, tipo, quantidade, motivo.trim(), usuario);
 
-        // Na entrada, o valor da compra vira o novo preço de custo; as OS antigas guardam o custo da época.
+        // Entrada atualiza o preco de custo e as OS antigas mantem o custo da epoca
         if (tipo == TipoMovimentacao.ENTRADA) {
             movimento.setValorUnitario(valorUnitario);
             produto.setPrecoCusto(valorUnitario);
@@ -88,14 +88,14 @@ public class EstoqueService {
         Produto produto = produtoRepository.buscarComBloqueio(id)
                 .orElseThrow(() -> erro(HttpStatus.NOT_FOUND, "Produto não encontrado."));
 
-        // Relê o estoque depois de esperar o bloqueio, porque outra transação pode tê-lo alterado.
+        // Rele o estoque apos o bloqueio porque outra transacao pode ter alterado
         entityManager.refresh(produto, LockModeType.PESSIMISTIC_WRITE);
         produto.setEmpenho(produtoRepository.quantidadeEmpenhada(id));
 
         return produto;
     }
 
-    // Quem chama já bloqueou o produto e está na mesma transação.
+    // Quem chama ja bloqueou o produto na mesma transacao
     public MovimentacaoEstoque registrar(
             Produto produto,
             Usuario funcionario,

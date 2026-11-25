@@ -20,7 +20,7 @@ import org.springframework.stereotype.Service;
 @Service
 public class ExcelService {
 
-    // Os valores em dinheiro ficam como número na planilha, para poderem ser somados no Excel.
+    // Dinheiro fica como numero para somar no Excel
     public byte[] gerar(
             String titulo,
             String filtros,

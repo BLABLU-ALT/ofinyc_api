@@ -19,7 +19,7 @@ import static org.springframework.security.test.web.servlet.response.SecurityMoc
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
-// Login real pelo formulário: usuários da tabela usuarios, perfil e bloqueio de inativos (REQ-12/14).
+// Login pelo formulario com usuarios da tabela perfil e bloqueio de inativos REQ-12 e REQ-14
 @SpringBootTest
 @AutoConfigureMockMvc
 class LoginUsuarioIntegrationTest {

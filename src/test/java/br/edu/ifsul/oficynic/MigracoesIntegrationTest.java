@@ -14,8 +14,8 @@ class MigracoesIntegrationTest {
     @Autowired DataSource dataSource;
     @Autowired JdbcTemplate jdbc;
 
-    // Bancos antigos com OS sem cliente ou motocicleta: as migrações até a V12 preservam os dados;
-    // a V13 só é aplicada depois que esses vínculos forem completados.
+    // Bancos antigos com OS sem cliente ou moto mantem os dados ate a V12
+    // A V13 so entra depois que esses vinculos forem completados
     private Flyway ateV12(String schema) {
         return Flyway.configure().dataSource(dataSource).schemas(schema).defaultSchema(schema).target("12").load();
     }

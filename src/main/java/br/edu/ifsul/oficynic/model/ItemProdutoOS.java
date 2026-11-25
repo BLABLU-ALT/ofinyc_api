@@ -43,7 +43,7 @@ public class ItemProdutoOS {
     @Column(name = "unidade_medida", nullable = false, length = 12)
     private String unidadeMedida;
 
-    // Custo do produto no momento da inclusão; nulo se não havia custo cadastrado.
+    // Custo do produto na inclusao ou nulo se nao havia custo
     @Column(name = "custo_unitario", precision = 14, scale = 2)
     private BigDecimal custoUnitario;
 

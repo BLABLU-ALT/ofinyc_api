@@ -27,8 +27,8 @@ import static org.springframework.security.test.web.servlet.request.SecurityMock
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
-// Apontamentos do orientador: orientação, parecer técnico, preços e permissões por perfil.
-// O usuário padrão é administrador; as chamadas com funcionario() simulam o perfil FUNCIONARIO.
+// Testes dos apontamentos do orientador sobre orientacao parecer tecnico precos e permissoes
+// Usuario padrao administrador e funcionario() simula o perfil FUNCIONARIO
 @SpringBootTest
 @AutoConfigureMockMvc
 @WithMockUser(username = "admin-teste", roles = "ADMINISTRADOR")
@@ -87,8 +87,8 @@ class ApontamentosIntegrationTest {
         long p = id(enviar(post("/api/produtos"), "{\"codigo\":\"APT" + UUID.randomUUID().toString().substring(0, 8)
                 + "\",\"descricao\":\"Pastilha\",\"precoVenda\":" + precoVenda + ",\"precoCusto\":" + precoCusto + ",\"unidadeMedida\":\"PC\"}", 201));
         produtos.add(p);
-        // A entrada atualiza o custo com o valor da compra; por isso a compra usa o próprio custo cadastrado.
-        // Produto sem custo recebe o estoque direto no banco, como um saldo anterior ao valor de compra.
+        // Entrada atualiza o custo entao a compra usa o proprio custo cadastrado
+        // Produto sem custo recebe estoque direto no banco como saldo anterior
         if ("null".equals(precoCusto)) jdbc.update("UPDATE produtos SET estoque = 10 WHERE id = ?", p);
         else enviar(post("/api/movimentacoes-estoque"), "{\"produtoId\":" + p + ",\"funcionarioId\":" + funcionario
                 + ",\"tipo\":\"ENTRADA\",\"quantidade\":10,\"valorUnitario\":" + precoCusto + ",\"motivo\":\"Compra de teste\"}", 201);
@@ -119,7 +119,7 @@ class ApontamentosIntegrationTest {
             return texto.toString();
         } finally { leitor.close(); }
     }
-    // Mesma data usada pelo servidor na abertura (fuso America/Sao_Paulo).
+    // Mesma data do servidor na abertura no fuso America/Sao_Paulo
     private String hoje() throws Exception {
         return mvc.perform(get("/api/ordens-servico/data-atual")).andReturn().getResponse().getContentAsString().replace("\"", "");
     }
@@ -178,10 +178,10 @@ class ApontamentosIntegrationTest {
         assertEquals(1, jdbc.queryForObject("SELECT count(*) FROM itens_produto_os WHERE ordem_servico_id=?", Integer.class, os));
         assertEquals(0, jdbc.queryForObject("SELECT count(*) FROM itens_servico_os WHERE ordem_servico_id=?", Integer.class, os));
 
-        // Sem valor informado, o preço sugerido é o de venda cadastrado.
+        // Sem valor informado usa o preco de venda cadastrado
         json = enviar(funcionario(post("/api/ordens-servico/" + os + "/servicos")), "{\"servicoId\":" + s + "}", 201);
         assertEquals(90.0, numero(json, "$.servicos[0].valorUnitario"));
-        // O administrador pode conceder um valor menor.
+        // Administrador pode dar valor menor
         json = enviar(post("/api/ordens-servico/" + os + "/produtos"), "{\"produtoId\":" + p + ",\"quantidade\":1,\"valorUnitario\":100}", 201);
         assertEquals(100.0, numero(json, "$.produtos[1].valorUnitario"));
     }
@@ -197,7 +197,7 @@ class ApontamentosIntegrationTest {
             enviar(post("/api/ordens-servico/abertura"), "{\"descricao\":\"Nova\",\"clienteId\":" + cliente + ",\"motocicletaId\":" + moto
                     + ",\"funcionarioId\":" + afastado + "}", 409);
 
-            // Inativar o responsável não apaga nem troca o vínculo da OS antiga.
+            // Inativar o responsavel nao muda o vinculo da OS antiga
             enviar(put("/api/usuarios/" + funcionario), "{\"nome\":\"Responsável apontamentos\",\"ativo\":false}", 200);
             mvc.perform(get("/api/ordens-servico/consulta/" + os)).andExpect(jsonPath("$.funcionarioNome").value("Responsável apontamentos"));
             enviar(funcionario(put("/api/ordens-servico/" + os)), cabecalho("Revisão de rotina", "Mantém o responsável"), 200);
@@ -319,7 +319,7 @@ class ApontamentosIntegrationTest {
         assertEquals(50.0, numero(json, "$.resumo.margemProdutosConcluidos"));
         assertTrue(((String) JsonPath.read(json, "$.resumo.observacao")).contains("não registra pagamentos"));
 
-        // Produto sem preço de custo: o sistema não inventa custo nem margem.
+        // Produto sem custo nao gera custo nem margem
         long semCusto = produto("40", "null"), outra = abrirOs("Sem custo");
         enviar(post("/api/ordens-servico/" + outra + "/produtos"), "{\"produtoId\":" + semCusto + ",\"quantidade\":1}", 201);
         concluir(outra, s50);

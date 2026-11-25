@@ -11,7 +11,7 @@
     const maiusculas = texto => texto.toLocaleUpperCase('pt-BR');
     const valor = maiusculas(original);
 
-    // Não apagar conteúdo quando a conversão Unicode expande uma letra (ex.: ß → SS).
+    // Nao apagar conteudo quando a maiuscula vira duas letras como ß em SS
     if (campo.maxLength >= 0 && valor.length > campo.maxLength) campo.setCustomValidity(aviso);
     else if (campo.validationMessage === aviso) campo.setCustomValidity('');
     if (valor === original) return;
@@ -36,7 +36,7 @@
     if (!evento.isComposing && !emComposicao.has(evento.target)) converter(evento.target);
   }, true);
   document.addEventListener('change', evento => {
-    // A lupa escreve o rótulo do registro selecionado e depende dele para manter o vínculo.
+    // A lupa escreve o rotulo do registro e depende dele para manter o vinculo
     if (!evento.target.closest('.lookup-field') && !emComposicao.has(evento.target)) converter(evento.target);
   }, true);
 })();

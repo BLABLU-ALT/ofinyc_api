@@ -120,7 +120,7 @@ public class UsuarioController {
                 ? null
                 : dados.login().trim().toLowerCase(Locale.ROOT);
 
-        // Sem login, o funcionário só aparece como responsável pelas OS e não entra no sistema.
+        // Sem login o funcionario so aparece como responsavel e nao entra no sistema
         if (login == null) {
             usuario.setLogin(null);
             usuario.setSenha(null);

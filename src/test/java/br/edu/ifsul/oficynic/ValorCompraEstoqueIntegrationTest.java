@@ -20,8 +20,8 @@ import static org.springframework.security.test.web.servlet.request.SecurityMock
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
-// Valor unitário de compra: obrigatório na entrada manual, vira o preço de custo do produto, não existe na saída
-// e só o administrador o vê.
+// Valor de compra obrigatorio na entrada manual vira preco de custo e nao existe na saida
+// So o administrador ve o valor de compra
 @SpringBootTest
 @AutoConfigureMockMvc
 @Transactional
@@ -54,7 +54,7 @@ class ValorCompraEstoqueIntegrationTest {
         assertEquals(0,new BigDecimal("12.50").compareTo(jdbc.queryForObject("SELECT valor_unitario FROM movimentacoes_estoque WHERE produto_id=?",BigDecimal.class,produto)));
         assertEquals(0,new BigDecimal("12.50").compareTo(custo()));
         assertEquals(0,new BigDecimal("2").compareTo(estoque()));
-        // O item incluído na OS guarda o custo do momento; a compra seguinte muda só o cadastro.
+        // Item da OS guarda o custo do momento e a compra seguinte muda so o cadastro
         long cliente=jdbc.queryForObject("INSERT INTO clientes(nome,cpf) VALUES ('Cliente custo',?) RETURNING id",Long.class,String.valueOf(System.nanoTime()).substring(0,11));
         long moto=jdbc.queryForObject("INSERT INTO motocicletas(placa,marca,modelo,ano,cliente_id) VALUES (?,'Marca','Modelo',2024,?) RETURNING id",Long.class,"V"+UUID.randomUUID().toString().replace("-","").substring(0,6).toUpperCase(),cliente);
         long os=jdbc.queryForObject("INSERT INTO ordens_servico(descricao,data_abertura,data_criacao,cliente_id,motocicleta_id,funcionario_id) VALUES ('Custo',CURRENT_DATE,CURRENT_DATE,?,?,?) RETURNING id",Long.class,cliente,moto,funcionario);

@@ -210,8 +210,8 @@ public class OrdemServicoService {
             throw erro(HttpStatus.CONFLICT, "Adicione pelo menos um serviço antes de finalizar.");
         }
 
-        // Os produtos são bloqueados sempre em ordem crescente de id, antes de qualquer baixa,
-        // para duas finalizações ao mesmo tempo não ficarem esperando uma pela outra.
+        // Bloqueia os produtos em ordem crescente de id antes da baixa
+        // Assim duas finalizacoes ao mesmo tempo nao travam uma a outra
         Map<Long, Produto> bloqueados = new TreeMap<>();
 
         ordem.getProdutos().stream()
@@ -278,7 +278,7 @@ public class OrdemServicoService {
         retrabalho.setSituacao(SituacaoOrdemServico.RETRABALHO);
         retrabalho.setOrdemOrigem(origem);
 
-        // Funcionário inativo não recebe OS nova; nesse caso o retrabalho fica sem responsável.
+        // Funcionario inativo nao recebe OS nova e o retrabalho fica sem responsavel
         if (origem.getFuncionario() != null && origem.getFuncionario().isAtivo()) {
             retrabalho.setFuncionario(origem.getFuncionario());
         }
@@ -347,7 +347,7 @@ public class OrdemServicoService {
         return ordem;
     }
 
-    // O produto entra na OS apenas como reserva (empenho); a saída do estoque acontece na finalização.
+    // Produto entra na OS como reserva e a baixa acontece na finalizacao
     public OrdemServico adicionarProduto(
             Long id,
             Long produtoId,
@@ -482,7 +482,7 @@ public class OrdemServicoService {
         }
     }
 
-    // Cliente e motocicleta são obrigatórios no banco; o responsável pode faltar só no retrabalho.
+    // Cliente e moto obrigatorios no banco e responsavel pode faltar so no retrabalho
     private void conferirVinculos(OrdemServico ordem) {
         if (ordem.getFuncionario() == null) {
             throw erro(HttpStatus.CONFLICT, "Complete o funcionário responsável desta OS antes de continuar.");
@@ -511,7 +511,7 @@ public class OrdemServicoService {
         }
     }
 
-    // O funcionário não pode cobrar menos que o preço cadastrado pelo administrador.
+    // Funcionario nao cobra menos que o preco cadastrado
     private void conferirPrecoMinimo(BigDecimal valor, BigDecimal precoCadastrado, boolean administrador) {
         if (!administrador && valor.compareTo(precoCadastrado) < 0) {
             String minimo = precoCadastrado.setScale(2, RoundingMode.HALF_UP)

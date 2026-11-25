@@ -16,7 +16,7 @@ button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible
   outline-offset: 2px;
 }
 
-/* Menu lateral e barra superior. */
+/* Menu lateral e barra superior */
 .sidebar {
   position: fixed;
   inset: 0 auto 0 0;
@@ -80,7 +80,7 @@ button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible
 .logout:hover { background: #183f61; }
 .menu-toggle { display: none; }
 
-/* Conteúdo e botões. */
+/* Conteudo e botoes */
 main#conteudo { padding: 20px; max-width: 1600px; margin: auto; }
 .page-heading { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 16px; }
 h1 { margin: 0; font-size: 23px; font-weight: normal; }
@@ -112,7 +112,7 @@ h2 { margin: 0; font-size: 17px; }
 .module-top, .module-card p { display: none; }
 .page-footer { display: flex; justify-content: space-between; gap: 15px; margin-top: 20px; padding-top: 10px; border-top: 1px solid #c6cfd8; color: #536475; font-size: 13px; }
 
-/* Listagem compacta, sem efeitos de movimento. */
+/* Listagem compacta sem efeitos de movimento */
 .list-panel { background: white; border: 1px solid #b7c1cc; }
 .list-toolbar { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 10px; background: #f5f6f8; border-bottom: 1px solid #b7c1cc; }
 .search-wrap { width: 340px; max-width: 100%; }
@@ -121,7 +121,7 @@ h2 { margin: 0; font-size: 17px; }
 .column-filters input, .column-filters select { min-width: 92px; font-size: 13px; }
 .column-filters .button { min-width: 0; width: 100%; }
 .list-controls { display: flex; align-items: center; gap: 8px; }
-/* Barra de ações da listagem (ao lado de Atualizar), com ícones maiores. */
+/* Barra de acoes da listagem com icones maiores */
 .list-actions { display: flex; align-items: center; gap: 8px; padding-right: 8px; border-right: 1px solid #ccd5de; }
 .list-controls .icon-button { min-width: 48px; min-height: 48px; padding: 10px; }
 .list-controls .icon-button .icone { width: 26px; height: 26px; }
@@ -143,7 +143,7 @@ tbody tr:hover { background: #eaf1f7; }
 .row-actions { display: flex; justify-content: flex-end; }
 .row-action { padding: 5px 10px; border: 1px solid #9facb9; background: #f4f5f7; color: #254f72; }
 .row-action:hover { background: #dfe8ef; }
-/* Ícones dos botões (REQ-15): traço herda a cor do texto. */
+/* Icones dos botoes REQ-15 com traco na cor do texto */
 .icone { width: 18px; height: 18px; flex: 0 0 auto; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
 .icon-button { display: inline-flex; align-items: center; justify-content: center; min-width: 40px; min-height: 40px; padding: 8px; }
 .icon-button .icone { width: 22px; height: 22px; }
@@ -163,7 +163,7 @@ a.icon-button { text-decoration: none; }
 .notice { padding: 10px 12px; margin-bottom: 12px; border: 1px solid #9fbaa8; background: #ecf4ee; color: #255a35; line-height: 1.5; overflow-wrap: anywhere; }
 .notice.error { border-color: #d49d9d; background: #fff0f0; color: #922e2e; }
 
-/* Janela de cadastro. */
+/* Janela de cadastro */
 dialog {
   width: 620px;
   max-width: calc(100vw - 24px);
@@ -190,7 +190,7 @@ dialog::backdrop { background: #152c434d; }
 .form-field input[aria-invalid=true] { border-color: #b44343; }
 .dialog-footer { display: flex; justify-content: flex-end; gap: 8px; padding: 10px 14px; border-top: 1px solid #b7c1cc; background: #edf0f3; }
 
-/* Acesso ao sistema. */
+/* Acesso ao sistema */
 .login-layout { min-height: 100dvh; }
 .login-story { background: #e4e8ed; border-bottom: 1px solid #b7c1cc; padding: 0 20px; }
 .login-story > div, .login-story > small { display: none; }
@@ -236,7 +236,7 @@ dialog::backdrop { background: #152c434d; }
   display: none;
 }
 
-/* Abertura e consulta da ordem de serviço. */
+/* Abertura e consulta da ordem de servico */
 textarea { width: 100%; padding: 8px; border: 1px solid #9facb9; font: inherit; resize: vertical; }
 .os-detalhe { min-width: 0; }
 .os-detalhe.wide { grid-column: 1 / -1; }
@@ -253,7 +253,7 @@ textarea { width: 100%; padding: 8px; border: 1px solid #9facb9; font: inherit; 
 .os-acoes { display: flex; flex-wrap: wrap; gap: 6px; }
 textarea:focus-visible { outline: 2px solid #176db0; outline-offset: 2px; }
 
-/* Tela da OS e pesquisas de referências. */
+/* Tela da OS e pesquisas de referencias */
 .lookup-field { position: relative; }
 .lookup-field input { padding-right: 42px; }
 .lookup-button { position: absolute; right: 1px; top: 1px; bottom: 1px; width: 36px; border: 0; border-left: 1px solid #9facb9; background: #e8edf2; font-size: 24px; }
@@ -281,7 +281,7 @@ textarea:focus-visible { outline: 2px solid #176db0; outline-offset: 2px; }
 @media (max-width: 1050px) { .os-header-grid, .os-add-grid { grid-template-columns: repeat(2,minmax(0,1fr)); } }
 @media (max-width: 600px) { .os-header-grid, .os-add-grid, .os-totals, .quick-client-grid { grid-template-columns: 1fr; } .os-panel { padding: 10px; } }
 
-/* Filtros e paginação das listagens. */
+/* Filtros e paginacao das listagens */
 .search-wrap { position: relative; }
 .search-wrap > span { display: block; position: absolute; left: 10px; top: 50%; transform: translateY(-50%); color: #536475; font-size: 20px; pointer-events: none; }
 .search-wrap input { padding-left: 35px; }
@@ -298,7 +298,7 @@ body[data-secao="produtos"] .list-panel table { min-width: 900px; }
 body[data-secao="servicos"] .list-panel table { min-width: 650px; }
 body[data-secao="funcionarios"] .list-panel table { min-width: 480px; }
 
-/* Painel operacional da Visão geral. */
+/* Painel da Visao geral */
 .dashboard { display: grid; gap: 16px; }
 .dashboard-toolbar, .dashboard-panel, .metric-card { background: #fff; border: 1px solid #b7c1cc; }
 .dashboard-toolbar { display: flex; justify-content: space-between; align-items: center; gap: 18px; padding: 14px 16px; }
@@ -351,7 +351,7 @@ body[data-secao="funcionarios"] .list-panel table { min-width: 480px; }
   .pagination #page-status { grid-column: 1 / -1; grid-row: 3; text-align: center; }
 }
 
-/* Ações dos formulários: alinhamento e quebra em telas pequenas. */
+/* Acoes dos formularios e quebra em telas pequenas */
 .dialog-footer { display:flex; justify-content:flex-end; align-items:center; flex-wrap:wrap; gap:8px; }
 .dialog-footer .button, .quick-actions .button { min-height:38px; display:inline-flex; align-items:center; justify-content:center; }
 body[data-secao="ordens-servico"] #form-fields > .quick-client-open,
@@ -364,7 +364,7 @@ body[data-secao="ordens-servico"] #form-fields > .refresh-motorcycles { align-se
   body[data-secao="ordens-servico"] #form-fields > .refresh-motorcycles { width:100%; }
 }
 #os-items-body td:last-child { white-space: nowrap; }
-/* Central de relatórios (REQ-19 a REQ-21) */
+/* Central de relatorios REQ-19 a REQ-21 */
 .report-tabs { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 12px; }
 .report-tabs .button[aria-pressed="true"] { background: #28618d; border-color: #194d75; color: #fff; }
 .report-filter-grid { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 10px; align-items: end; }

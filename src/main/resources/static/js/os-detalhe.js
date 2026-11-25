@@ -16,12 +16,12 @@
     const finalizada=somenteConsulta();
     cliente=criarBusca({nome:'header-cliente',rotulo:'Cliente',registros:()=>clientes,descricao:c=>c.nome,chaves:c=>[c.id,c.nome],aoSelecionar:()=>moto?.limpar()});
     moto=criarBusca({nome:'header-moto',rotulo:'Motocicleta',registros:()=>motos.filter(m=>String(m.clienteId)===String(cliente.valor())),descricao:m=>(m.placa||m.chassi)+' · '+m.marca+' '+m.modelo,chaves:m=>[m.id,m.placa,m.chassi,m.marca+' '+m.modelo]});
-    // Preserva a identificação do responsável inativo nesta OS, sem oferecê-lo para outras.
+    // Mantem o responsavel inativo nesta OS sem oferecer para outras
     if(ordem.funcionarioId&&!funcionarios.some(f=>String(f.id)===String(ordem.funcionarioId)))funcionarios.push({id:ordem.funcionarioId,nome:ordem.funcionarioNome+' (inativo)'});
     funcionario=criarBusca({nome:'header-funcionario',rotulo:'Funcionário responsável',registros:()=>funcionarios,descricao:f=>f.nome,chaves:f=>[f.id,f.nome]});
     cliente.selecionarId(ordem.clienteId);moto.selecionarId(ordem.motocicletaId);funcionario.selecionarId(ordem.funcionarioId);
-    // Exibe o vínculo antigo mesmo quando a moto ainda não tem proprietário cadastrado.
-    // A confirmação para editar continua exigindo uma moto elegível do cliente.
+    // Mostra o vinculo antigo mesmo sem proprietario na moto
+    // Para editar continua exigindo uma moto valida do cliente
     if(ordem.motocicletaId&&!moto.valor()){
       const vinculada=motos.find(m=>String(m.id)===String(ordem.motocicletaId));
       moto.input.value=ordem.motocicletaId+' · '+(vinculada?.placa||vinculada?.chassi||ordem.placa||ordem.chassi||'Moto vinculada');
